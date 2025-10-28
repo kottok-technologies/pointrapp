@@ -1,6 +1,7 @@
 variable "environment" {
   type        = string
   description = "Environment name (prod/dev)"
+  default     = "dev"
 }
 
 variable "image_uri" {
