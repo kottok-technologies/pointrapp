@@ -7,6 +7,7 @@ variable "environment" {
 variable "image_uri" {
   type        = string
   description = "ECR image URI to deploy"
+  default     = "placeholder"
 }
 
 variable "route53_zone_id" {
