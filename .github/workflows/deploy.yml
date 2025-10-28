@@ -24,7 +24,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       ECR_REPO: "pointrapp"
       TERRAFORM_DIR: "terraform"
-      WORKSPACE: ${{ github.ref == 'refs/heads/main' && 'production' || 'testing' }}
+      WORKSPACE: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
       IMAGE_TAG: ${{ github.sha }}
 
     steps:

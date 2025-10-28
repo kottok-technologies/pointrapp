@@ -3,8 +3,13 @@
 # ===========================================================
 
 resource "aws_dynamodb_table" "pointrapp" {
-  name         = "PointrApp"
+  name         = "PointrApp-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"
+
+  deletion_protection_enabled = true
+  point_in_time_recovery {
+    enabled = true
+  }
 
   hash_key  = "PK"
   range_key = "SK"
@@ -73,8 +78,6 @@ resource "aws_dynamodb_table" "pointrapp" {
   point_in_time_recovery {
     enabled = true
   }
-
-  deletion_protection_enabled = true
 
   tags = {
     Project = "PointrApp"

@@ -5,5 +5,12 @@ resource "aws_ecr_repository" "pointrapp" {
   lifecycle {
     prevent_destroy = true
   }
+
+  tags = {
+    application     = "pointrapp"
+  }
 }
 
+output "ecr_repository_url" {
+  value = aws_ecr_repository.pointrapp.repository_url
+}

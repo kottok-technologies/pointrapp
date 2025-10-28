@@ -1,6 +1,6 @@
 variable "environment" {
   type        = string
-  description = "Environment name (production/testing)"
+  description = "Environment name (prod/dev)"
 }
 
 variable "image_uri" {
@@ -8,8 +8,8 @@ variable "image_uri" {
   description = "ECR image URI to deploy"
 }
 
-variable "ecr_repo" {
+variable "route53_zone_id" {
   type        = string
-  default     = "pointrapp"
+  description = "Zone ID for pointrapp in R53"
+  default     = "Z021125431208XT5W7T05"
 }
-
