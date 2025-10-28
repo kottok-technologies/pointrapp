@@ -74,11 +74,6 @@ resource "aws_dynamodb_table" "pointrapp" {
     projection_type = "ALL"
   }
 
-  # Table configuration
-  point_in_time_recovery {
-    enabled = true
-  }
-
   tags = {
     Project = "PointrApp"
     Env     = var.environment
