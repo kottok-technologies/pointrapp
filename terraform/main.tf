@@ -1,9 +1,9 @@
-module "ECR" {
+module "ecr" {
   source = "./modules/ecr"
   project_name = var.project_name
 }
 
-module "INFRA" {
+module "infra" {
   source = "./modules/infra"
   project_name = var.project_name
   image_uri = var.image_uri
