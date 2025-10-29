@@ -41,6 +41,8 @@ export interface Story {
 
 // Vote (one per user per story)
 export interface Vote {
+    PK: string;
+    SK: string;
     id: string;
     storyId: string;
     userId: string;

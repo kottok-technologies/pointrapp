@@ -13,7 +13,7 @@ export function FacilitatorControls() {
     async function handleReveal() {
         setLoading(true);
         try {
-            await actions.revealVotes(activeStory.id);
+            await actions.revealVotes(activeStory!.id);
         } finally {
             setLoading(false);
             await refresh();
@@ -23,7 +23,7 @@ export function FacilitatorControls() {
     async function handleRevote() {
         setLoading(true);
         try {
-            await actions.revoteStory(activeStory.id);
+            await actions.revoteStory(activeStory!.id);
         } finally {
             setLoading(false);
             await refresh();
@@ -34,7 +34,7 @@ export function FacilitatorControls() {
         setLoading(true);
         try {
             // mark current story as done, move to next one
-            await actions.revealVotes(activeStory.id);
+            await actions.revealVotes(activeStory!.id);
             await refresh();
         } finally {
             setLoading(false);

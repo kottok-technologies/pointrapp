@@ -24,11 +24,16 @@ export function JoinRoomModal() {
 
         try {
             await actions.joinRoom(name.trim(), role);
-        } catch (err: any) {
-            setError(err.message || "Failed to join room");
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Failed to join room");
+            }
         } finally {
             setLoading(false);
         }
+
     }
 
     return (

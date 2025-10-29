@@ -27,8 +27,12 @@ export function StoryList() {
             setNewTitle("");
             setMessage("Story added successfully!");
             await refresh();
-        } catch (err: any) {
-            setMessage(err.message || "Error adding story");
+        } catch (err) {
+            if (err instanceof Error) {
+                setMessage(err.message);
+            } else {
+                setMessage("Error adding story");
+            }
         } finally {
             setAdding(false);
         }

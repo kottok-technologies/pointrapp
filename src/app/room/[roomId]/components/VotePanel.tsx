@@ -27,7 +27,7 @@ export function VotePanel() {
         setMessage("");
 
         try {
-            const res = await fetch(`/api/rooms/${room.id}/votes`, {
+            const res = await fetch(`/api/rooms/${room!.id}/votes`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -42,8 +42,12 @@ export function VotePanel() {
 
             setMessage("Vote recorded!");
             await refresh();
-        } catch (err: any) {
-            setMessage(err.message);
+        } catch (err) {
+            if (err instanceof Error) {
+                setMessage(err.message);
+            } else {
+                setMessage("Failed to record vote");
+            }
             setSelected(null);
         } finally {
             setLoading(false);

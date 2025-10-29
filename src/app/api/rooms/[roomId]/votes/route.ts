@@ -1,8 +1,9 @@
-// app/api/rooms/[roomId]/votes/route.ts
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
-import { putItem, getItem, queryByPK } from "@/lib/dynamo";
+import { putItem, getItem } from "@/lib/dynamo";
+import type { Vote, Room, Story } from "@/lib/types";
 
+// ✅ Schema validation
 const SubmitVoteSchema = z.object({
     userId: z.string().min(1, "userId is required"),
     storyId: z.string().min(1, "storyId is required"),
@@ -11,21 +12,24 @@ const SubmitVoteSchema = z.object({
 
 export async function POST(
     req: Request,
-    { params }: { params: { roomId: string } }
+    context: { params: Promise<{ roomId: string }> }
 ) {
     try {
-        const roomId = params.roomId;
+        const { roomId } = await context.params;
         const body = await req.json();
         const parsed = SubmitVoteSchema.parse(body);
 
-        // Check room exists
-        const room = await getItem(`ROOM#${roomId}`, `ROOM#${roomId}`);
+        // 🧠 Verify the room exists
+        const room = await getItem<Room>(`ROOM#${roomId}`, `ROOM#${roomId}`);
         if (!room) {
-            return NextResponse.json({ error: `Room ${roomId} not found` }, { status: 404 });
+            return NextResponse.json(
+                { error: `Room ${roomId} not found` },
+                { status: 404 }
+            );
         }
 
-        // Check story exists under this room
-        const story = await getItem(
+        // ✅ Verify the story exists under this room
+        const story = await getItem<Story>(
             `ROOM#${roomId}`,
             `STORY#${parsed.storyId}`
         );
@@ -36,33 +40,44 @@ export async function POST(
             );
         }
 
-        // Create vote item
-        const voteId = `${parsed.storyId}#${parsed.userId}`; // unique-ish
+        // 🆕 Construct the vote item
+        const voteId = `${parsed.storyId}#${parsed.userId}`; // unique per user per story
         const timestamp = new Date().toISOString();
 
-        const voteItem = {
+        const voteItem: Vote = {
             PK: `ROOM#${roomId}`,
             SK: `VOTE#${voteId}`,
-            EntityType: "Vote",
-            RoomId: roomId,
-            StoryId: parsed.storyId,
-            UserId: parsed.userId,
-            Value: parsed.value,
-            CreatedAt: timestamp,
+            id: voteId,
+            storyId: parsed.storyId,
+            userId: parsed.userId,
+            roomId,
+            value: parsed.value,
+            createdAt: timestamp,
         };
 
         await putItem(voteItem);
 
         return NextResponse.json(
-            { message: `Vote recorded for story ${parsed.storyId} by user ${parsed.userId}` },
+            {
+                message: `Vote recorded for story ${parsed.storyId} by user ${parsed.userId}`,
+                vote: voteItem,
+            },
             { status: 201 }
         );
     } catch (error: unknown) {
         console.error("❌ Error submitting vote:", error);
+
         if (error instanceof ZodError) {
             const messages = error.issues.map((i) => i.message).join(", ");
-            return NextResponse.json({ error: `Validation failed: ${messages}` }, { status: 400 });
+            return NextResponse.json(
+                { error: `Validation failed: ${messages}` },
+                { status: 400 }
+            );
         }
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+
+        return NextResponse.json(
+            { error: "Internal server error" },
+            { status: 500 }
+        );
     }
 }

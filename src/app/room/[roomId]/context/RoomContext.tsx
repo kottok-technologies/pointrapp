@@ -8,11 +8,12 @@ import React, {
     ReactNode,
     useMemo,
 } from "react";
+import toast from "react-hot-toast";
 import { useRoomData } from "../hooks/useRoomData";
-import { User, Story } from "@/lib/types";
+import { User, Story, Room } from "@/lib/types";
 
 interface RoomContextValue {
-    room: any | null;
+    room: Room | null;
     users: User[];
     stories: Story[];
     activeStory: Story | null;
@@ -44,23 +45,32 @@ const STORAGE_KEY = (roomId: string) => `pointrapp:user:${roomId}`;
 
 export function RoomProvider({ roomId, children }: RoomProviderProps) {
     const { room, users, stories, loading, error, refresh } = useRoomData(roomId);
-    const [activeStory, setActiveStory] = useState<Story | null>(null);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-    // 🧠 Load persisted user from localStorage (if exists)
-    useEffect(() => {
+    // --- Restore user from localStorage lazily ---
+    const [currentUser, setCurrentUser] = useState<User | null>(() => {
         try {
             const saved = localStorage.getItem(STORAGE_KEY(roomId));
-            if (saved) {
-                const parsed: User = JSON.parse(saved);
-                setCurrentUser(parsed);
-            }
-        } catch (err) {
-            console.error("❌ Failed to load user session:", err);
+            return saved ? (JSON.parse(saved) as User) : null;
+        } catch {
+            return null;
         }
+    });
+
+    const [activeStory, setActiveStory] = useState<Story | null>(null);
+
+    // --- Toast when restoring a saved user session ---
+    useEffect(() => {
+        if (currentUser) {
+            toast.success(`Welcome back, ${currentUser.name}! 👋`, {
+                id: "welcome-toast",
+                duration: 3000,
+            });
+        }
+        // only trigger on first mount for this roomId
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [roomId]);
 
-    // 🧾 Persist user whenever it changes
+    // --- Persist user whenever it changes ---
     useEffect(() => {
         if (currentUser) {
             localStorage.setItem(STORAGE_KEY(roomId), JSON.stringify(currentUser));
@@ -69,15 +79,15 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
         }
     }, [currentUser, roomId]);
 
-    // 🧩 Auto-pick first estimating story
+    // --- Auto-pick active story ---
     useEffect(() => {
         if (!activeStory && stories.length > 0) {
             const estimating = stories.find((s) => s.status === "estimating");
             setActiveStory(estimating || stories[0]);
         }
-    }, [stories]);
+    }, [stories, activeStory]);
 
-    // 🧱 Actions
+    // --- Actions ---
     const actions: RoomActions = useMemo(
         () => ({
             async addStory(title: string, description?: string) {
@@ -128,6 +138,8 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                 setCurrentUser(newUser);
                 localStorage.setItem(STORAGE_KEY(roomId), JSON.stringify(newUser));
                 await refresh();
+
+                toast.success(`Welcome, ${name}! 🎉`);
                 return newUser;
             },
 
@@ -165,6 +177,7 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
     return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;
 }
 
+// --- Hook for safe context usage ---
 export function useRoom() {
     const context = useContext(RoomContext);
     if (!context) throw new Error("useRoom must be used within a RoomProvider");

@@ -1,4 +1,3 @@
-// lib/dynamo.ts
 import {
     DynamoDBClient,
     GetItemCommand,
@@ -7,67 +6,88 @@ import {
     UpdateItemCommand,
     DeleteItemCommand,
     ScanCommand,
+    AttributeValue,
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 
-// Create the DynamoDB client
+type AttrMap = Record<string, AttributeValue>;
+
+// ============================================================
+// DynamoDB Client Setup
+// ============================================================
+
 export const dynamo = new DynamoDBClient({
     region: process.env.AWS_REGION,
 });
 
 const TableName = process.env.DYNAMODB_TABLE_NAME!;
+if (!TableName)
+    throw new Error("❌ Missing DYNAMODB_TABLE_NAME env variable");
 
 // ============================================================
-// ✅ Basic Utilities
+// Utility Helpers
 // ============================================================
 
-/** Puts an item into DynamoDB (insert or replace). */
-export async function putItem<T extends Record<string, any>>(item: T): Promise<void> {
+/** Helper for marshalling values safely (returns AttrMap). */
+function safeMarshall<T extends object>(obj: T): AttrMap {
+    return marshall(obj, { removeUndefinedValues: true }) as AttrMap;
+}
+
+/** Helper for unmarshalling values safely (accepts AttrMap). */
+function safeUnmarshall<T>(item: AttrMap): T {
+    return unmarshall(item) as T;
+}
+
+// ============================================================
+// CRUD Utilities
+// ============================================================
+
+/** Inserts or replaces an item in DynamoDB. */
+export async function putItem<T extends object>(item: T): Promise<void> {
     const params = {
         TableName,
-        Item: marshall(item),
+        Item: safeMarshall(item),
     };
-
     await dynamo.send(new PutItemCommand(params));
 }
 
-/** Gets a single item by PK + SK. */
-export async function getItem<T = any>(pk: string, sk: string): Promise<T | null> {
+/** Retrieves a single item by PK + SK. */
+export async function getItem<T>(
+    pk: string,
+    sk: string
+): Promise<T | null> {
     const params = {
         TableName,
-        Key: marshall({ PK: pk, SK: sk }),
+        Key: safeMarshall({ PK: pk, SK: sk }),
     };
 
     const { Item } = await dynamo.send(new GetItemCommand(params));
-    return Item ? (unmarshall(Item) as T) : null;
+    return Item ? safeUnmarshall<T>(Item as AttrMap) : null;
 }
 
 /** Deletes an item by PK + SK. */
 export async function deleteItem(pk: string, sk: string): Promise<void> {
     const params = {
         TableName,
-        Key: marshall({ PK: pk, SK: sk }),
+        Key: safeMarshall({ PK: pk, SK: sk }),
     };
-
     await dynamo.send(new DeleteItemCommand(params));
 }
 
-/** Queries all items in a partition (e.g. all users/stories in a room). */
-export async function queryByPK<T = any>(pk: string): Promise<T[]> {
+/** Queries all items in a partition (e.g., all users/stories in a room). */
+export async function queryByPK<T>(pk: string): Promise<T[]> {
     const params = {
         TableName,
         KeyConditionExpression: "PK = :pk",
-        ExpressionAttributeValues: marshall({
-            ":pk": pk,
-        }),
+        ExpressionAttributeValues: safeMarshall({ ":pk": pk }),
     };
 
     const { Items } = await dynamo.send(new QueryCommand(params));
-    return (Items || []).map((i) => unmarshall(i) as T);
+    return (Items || []).map((i) => safeUnmarshall<T>(i as AttrMap));
 }
 
-/** Queries by a given GSI. */
-export async function queryByGSI<T = any>(
+/** Queries by a Global Secondary Index (GSI). */
+export async function queryByGSI<T>(
     indexName: string,
     keyName: string,
     keyValue: string
@@ -76,24 +96,22 @@ export async function queryByGSI<T = any>(
         TableName,
         IndexName: indexName,
         KeyConditionExpression: `${keyName} = :v`,
-        ExpressionAttributeValues: marshall({
-            ":v": keyValue,
-        }),
+        ExpressionAttributeValues: safeMarshall({ ":v": keyValue }),
     };
 
     const { Items } = await dynamo.send(new QueryCommand(params));
-    return (Items || []).map((i) => unmarshall(i) as T);
+    return (Items || []).map((i) => safeUnmarshall<T>(i as AttrMap));
 }
 
-/** Performs a partial update on an item (e.g. updating story status). */
-export async function updateItem(
+/** Performs a partial update on an item (e.g., updating story status). */
+export async function updateItem<T>(
     pk: string,
     sk: string,
-    updates: Record<string, any>
+    updates: Partial<T>
 ): Promise<void> {
     const setExpressions: string[] = [];
     const exprNames: Record<string, string> = {};
-    const exprValues: Record<string, any> = {};
+    const exprValues: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(updates)) {
         const nameKey = `#${key}`;
@@ -105,18 +123,18 @@ export async function updateItem(
 
     const params = {
         TableName,
-        Key: marshall({ PK: pk, SK: sk }),
+        Key: safeMarshall({ PK: pk, SK: sk }),
         UpdateExpression: `SET ${setExpressions.join(", ")}`,
         ExpressionAttributeNames: exprNames,
-        ExpressionAttributeValues: marshall(exprValues),
+        ExpressionAttributeValues: safeMarshall(exprValues),
     };
 
     await dynamo.send(new UpdateItemCommand(params));
 }
 
-/** Fetches all items (for testing/admin). Not for production scale use. */
-export async function scanAll<T = any>(): Promise<T[]> {
+/** Scans all items in the table. ⚠️ For testing/admin only. */
+export async function scanAll<T>(): Promise<T[]> {
     const params = { TableName };
     const { Items } = await dynamo.send(new ScanCommand(params));
-    return (Items || []).map((i) => unmarshall(i) as T);
+    return (Items || []).map((i) => safeUnmarshall<T>(i as AttrMap));
 }

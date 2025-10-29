@@ -13,10 +13,10 @@ const JoinRoomSchema = z.object({
 // ✅ Route Handler
 export async function POST(
     req: Request,
-    { params }: { params: { roomId: string } }
+    context: { params: Promise<{ roomId: string }> }
 ) {
     try {
-        const roomId = params.roomId;
+        const { roomId } = await context.params;
         const body = await req.json();
         const parsed = JoinRoomSchema.parse(body);
 

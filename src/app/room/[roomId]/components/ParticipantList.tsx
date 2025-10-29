@@ -1,6 +1,7 @@
 "use client";
 
 import { useRoom } from "../context/RoomContext";
+import Image from "next/image";
 
 export function ParticipantList() {
     const { users, loading } = useRoom();
@@ -25,7 +26,7 @@ export function ParticipantList() {
                     >
                         <div className="flex items-center space-x-3">
                             {user.avatarUrl ? (
-                                <img
+                                <Image
                                     src={user.avatarUrl}
                                     alt={user.name}
                                     className="w-8 h-8 rounded-full border"

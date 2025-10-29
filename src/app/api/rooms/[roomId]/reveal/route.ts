@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { getItem, queryByPK, updateItem } from "@/lib/dynamo";
+import { Vote } from "@/lib/types"
 
 // ✅ Validation schema
 const RevealSchema = z.object({
@@ -9,10 +10,10 @@ const RevealSchema = z.object({
 
 export async function POST(
     req: Request,
-    { params }: { params: { roomId: string } }
+    context: { params: Promise<{ roomId: string }> }
 ) {
     try {
-        const roomId = params.roomId;
+        const { roomId } = await context.params;
         const body = await req.json();
         const parsed = RevealSchema.parse(body);
 
@@ -32,9 +33,9 @@ export async function POST(
         }
 
         // 🗳️ Get all votes for this story
-        const allItems = await queryByPK(`ROOM#${roomId}`);
+        const allItems = await queryByPK<Vote>(`ROOM#${roomId}`);
         const votes = allItems.filter(
-            (i) => i.EntityType === "Vote" && i.StoryId === parsed.storyId
+            (vote) => vote.storyId === parsed.storyId
         );
 
         if (votes.length === 0) {
@@ -46,7 +47,7 @@ export async function POST(
 
         // 🧮 Extract numeric votes (ignore '?', coffee breaks, etc.)
         const numericVotes = votes
-            .map((v) => Number(v.Value))
+            .map((v) => Number(v.value))
             .filter((v) => !isNaN(v));
 
         let average = null;

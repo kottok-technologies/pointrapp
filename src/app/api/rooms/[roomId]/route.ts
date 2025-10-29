@@ -1,65 +1,86 @@
 import { NextResponse } from "next/server";
 import { queryByPK, getItem } from "@/lib/dynamo";
+import type { Room, User, Story } from "@/lib/types";
 
 // ✅ GET /api/rooms/[roomId]
 export async function GET(
-    _req: Request,
-    { params }: { params: { roomId: string } }
+    req: Request,
+    context: { params: Promise<{ roomId: string }> }
 ) {
     try {
-        const roomId = params.roomId;
+        const { roomId } = await context.params;
         const pk = `ROOM#${roomId}`;
 
         // 1️⃣ Fetch the main Room record
-        const room = await getItem(pk, pk);
-        if (!room) {
+        const roomItem = await getItem<Record<string, unknown>>(pk, pk);
+        if (!roomItem) {
             return NextResponse.json(
                 { error: `Room ${roomId} not found` },
                 { status: 404 }
             );
         }
 
-        // 2️⃣ Fetch all related items (users, stories, votes)
-        const items = await queryByPK(pk);
+        // Normalize room to match our Room interface
+        const room: Room = {
+            id: String(roomItem.id ?? roomId),
+            name: String(roomItem.name ?? "Untitled Room"),
+            createdBy: String(roomItem.createdBy ?? ""),
+            deckType: (roomItem.deckType as Room["deckType"]) ?? "fibonacci",
+            customDeckValues: (roomItem.customDeckValues as string[]) ?? [],
+            status: (roomItem.status as Room["status"]) ?? "active",
+            revealMode: (roomItem.revealMode as Room["revealMode"]) ?? "allReveal",
+            allowObservers: Boolean(roomItem.allowObservers ?? true),
+            createdAt: String(roomItem.createdAt ?? new Date().toISOString()),
+            updatedAt: String(roomItem.updatedAt ?? new Date().toISOString()),
+            currentStoryId: roomItem.currentStoryId
+                ? String(roomItem.currentStoryId)
+                : undefined,
+        };
 
-        const users = items
+        // 2️⃣ Fetch all related items (users, stories)
+        const items = await queryByPK<Record<string, unknown>>(pk);
+
+        const users: User[] = items
             .filter((i) => i.EntityType === "User")
             .map((u) => ({
-                id: u.UserId || u.id,
-                name: u.Name,
-                role: u.Role,
-                avatarUrl: u.AvatarUrl,
-                joinedAt: u.JoinedAt,
-                lastActiveAt: u.LastActiveAt,
-                roomId: u.RoomId,
+                id: String(u.id ?? crypto.randomUUID()),
+                name: String(u.name ?? "Unnamed"),
+                role: (u.role as User["role"]) ?? "participant",
+                avatarUrl: u.avatarUrl ? String(u.avatarUrl) : undefined,
+                joinedAt: String(u.joinedAt ?? new Date().toISOString()),
+                lastActiveAt: u.lastActiveAt
+                    ? String(u.lastActiveAt)
+                    : undefined,
+                roomId: String(u.roomId ?? roomId),
             }));
 
-        const stories = items
+        const stories: Story[] = items
             .filter((i) => i.EntityType === "Story")
             .map((s) => ({
-                id: s.StoryId,
-                title: s.Title,
-                description: s.Description,
-                status: s.Status,
-                average: s.Average,
-                consensus: s.Consensus,
-                createdAt: s.CreatedAt,
+                id: String(s.id ?? crypto.randomUUID()),
+                roomId: String(s.roomId ?? roomId),
+                title: String(s.title ?? "Untitled Story"),
+                description: s.description ? String(s.description) : undefined,
+                link: s.link ? String(s.link) : undefined,
+                order: Number(s.order ?? 0),
+                status: (s.status as Story["status"]) ?? "pending",
+                average:
+                    s.average !== undefined ? Number(s.average) : undefined,
+                consensus:
+                    s.consensus !== undefined
+                        ? Boolean(s.consensus)
+                        : undefined,
+                finalValue:
+                    s.finalValue !== undefined
+                        ? String(s.finalValue)
+                        : undefined,
+                createdAt: String(s.createdAt ?? new Date().toISOString()),
             }));
 
         // 3️⃣ Return structured response
         return NextResponse.json(
             {
-                room: {
-                    id: room.RoomId,
-                    name: room.Name,
-                    createdBy: room.CreatedBy,
-                    deckType: room.DeckType,
-                    status: room.Status,
-                    allowObservers: room.AllowObservers,
-                    revealMode: room.RevealMode,
-                    createdAt: room.CreatedAt,
-                    updatedAt: room.UpdatedAt,
-                },
+                room,
                 users,
                 stories,
             },

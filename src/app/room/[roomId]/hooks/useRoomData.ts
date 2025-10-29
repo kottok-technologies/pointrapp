@@ -1,28 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Story } from "@/lib/types";
-
-interface RoomData {
-    id: string;
-    name: string;
-    createdBy: string;
-    deckType: string;
-    status: string;
-    allowObservers: boolean;
-    revealMode: string;
-    createdAt: string;
-    updatedAt: string;
-}
+import { User, Story, Room} from "@/lib/types";
 
 interface RoomResponse {
-    room: RoomData;
+    room: Room;
     users: User[];
     stories: Story[];
+    error: string;
 }
 
 interface UseRoomDataReturn {
-    room: RoomData | null;
+    room: Room | null;
     users: User[];
     stories: Story[];
     loading: boolean;
@@ -31,7 +20,7 @@ interface UseRoomDataReturn {
 }
 
 export function useRoomData(roomId: string, intervalMs = 10000): UseRoomDataReturn {
-    const [room, setRoom] = useState<RoomData | null>(null);
+    const [room, setRoom] = useState<Room | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [stories, setStories] = useState<Story[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,26 +33,37 @@ export function useRoomData(roomId: string, intervalMs = 10000): UseRoomDataRetu
 
         try {
             const res = await fetch(`/api/rooms/${roomId}`, { cache: "no-store" });
+
+            // Explicitly type the expected shape of your JSON
             const data: RoomResponse = await res.json();
 
-            if (!res.ok) throw new Error(data as any);
+            if (!res.ok) {
+                // Throw a descriptive error so TypeScript knows it’s an Error
+                throw new Error(data.error ?? "Failed to load room data");
+            }
 
             setRoom(data.room);
             setUsers(data.users);
             setStories(data.stories);
-        } catch (err: any) {
-            console.error("❌ Failed to fetch room data:", err);
-            setError(err.message || "Failed to fetch room data");
+        } catch (err) {
+            // err is `unknown` by default in modern TS; narrow it safely
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to fetch room data (unknown error)";
+            console.error("❌ Failed to fetch room data:", message);
+            setError(message);
         } finally {
             setLoading(false);
         }
+
     }
 
     useEffect(() => {
         fetchRoomData();
         const interval = setInterval(fetchRoomData, intervalMs);
         return () => clearInterval(interval);
-    }, [roomId]);
+    }, [fetchRoomData, intervalMs, roomId]);
 
     return {
         room,

@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
-import { getItem, queryByPK, updateItem, deleteItem } from "@/lib/dynamo";
+import {
+    getItem,
+    queryByPK,
+    updateItem,
+    deleteItem,
+} from "@/lib/dynamo";
+import type { Vote } from "@/lib/types";
 
 // ✅ Validation schema
 const RevoteSchema = z.object({
@@ -9,10 +15,10 @@ const RevoteSchema = z.object({
 
 export async function POST(
     req: Request,
-    { params }: { params: { roomId: string } }
+    context: { params: Promise<{ roomId: string }> }
 ) {
     try {
-        const roomId = params.roomId;
+        const { roomId } = await context.params;
         const body = await req.json();
         const parsed = RevoteSchema.parse(body);
 
@@ -34,18 +40,21 @@ export async function POST(
             );
         }
 
-        // 🗳️ Fetch all votes under this room for the target story
-        const allItems = await queryByPK(`ROOM#${roomId}`);
+        // 🗳️ Fetch all items under this room, narrow to votes for the target story
+        const allItems = await queryByPK<Vote>(`ROOM#${roomId}`);
         const votesToDelete = allItems.filter(
-            (i) => i.EntityType === "Vote" && i.StoryId === parsed.storyId
+            (vote) =>
+                vote.storyId === parsed.storyId &&
+                vote.PK.startsWith(`ROOM#${roomId}`) &&
+                vote.SK.startsWith("VOTE#")
         );
 
         // 🧹 Remove existing votes
         for (const vote of votesToDelete) {
-            await deleteItem(`ROOM#${roomId}`, vote.SK);
+            await deleteItem(vote.PK, vote.SK);
         }
 
-        // 🔄 Reset story status
+        // 🔄 Reset story status for re-estimation
         await updateItem(`ROOM#${roomId}`, `STORY#${parsed.storyId}`, {
             Status: "estimating",
             Revealed: false,
