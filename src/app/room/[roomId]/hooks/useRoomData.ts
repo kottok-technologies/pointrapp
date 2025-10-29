@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { User, Story, Room} from "@/lib/types";
 
 interface RoomResponse {
@@ -26,7 +26,8 @@ export function useRoomData(roomId: string, intervalMs = 10000): UseRoomDataRetu
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    async function fetchRoomData() {
+    // ✅ Memoize fetchRoomData so its reference is stable across renders
+    const fetchRoomData = useCallback(async () => {
         if (!roomId) return;
         setLoading(true);
         setError(null);
@@ -34,19 +35,13 @@ export function useRoomData(roomId: string, intervalMs = 10000): UseRoomDataRetu
         try {
             const res = await fetch(`/api/rooms/${roomId}`, { cache: "no-store" });
 
-            // Explicitly type the expected shape of your JSON
             const data: RoomResponse = await res.json();
-
-            if (!res.ok) {
-                // Throw a descriptive error so TypeScript knows it’s an Error
-                throw new Error(data.error ?? "Failed to load room data");
-            }
+            if (!res.ok) throw new Error(data.error ?? "Failed to load room data");
 
             setRoom(data.room);
             setUsers(data.users);
             setStories(data.stories);
         } catch (err) {
-            // err is `unknown` by default in modern TS; narrow it safely
             const message =
                 err instanceof Error
                     ? err.message
@@ -56,8 +51,12 @@ export function useRoomData(roomId: string, intervalMs = 10000): UseRoomDataRetu
         } finally {
             setLoading(false);
         }
+    }, [roomId]); // ✅ depends only on roomId
 
-    }
+    // ✅ Now your useEffect sees a stable dependency
+    useEffect(() => {
+        fetchRoomData();
+    }, [fetchRoomData]);
 
     useEffect(() => {
         fetchRoomData();

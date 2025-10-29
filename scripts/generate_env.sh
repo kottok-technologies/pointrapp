@@ -22,12 +22,15 @@ else
   # 🌐 Dynamically pick NEXTAUTH_URL
   if [[ "$ENVIRONMENT" == "prod" || "$ENVIRONMENT" == "production" ]]; then
     NEXTAUTH_URL="https://www.pointrapp.com"
+    DYNAMODB_TABLE_NAME="PointrApp-prod"
   else
     NEXTAUTH_URL="https://dev.pointrapp.com"
+    DYNAMODB_TABLE_NAME="PointrApp-dev"
   fi
 
   {
     echo "NEXTAUTH_URL=$NEXTAUTH_URL"
+    echo "DYNAMODB_TABLE_NAME=$DYNAMODB_TABLE_NAME"
   } >> .env.production
 
   log "✅ .env.production ready for environment: $ENVIRONMENT"
