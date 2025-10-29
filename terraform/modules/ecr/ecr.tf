@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "pointrapp" {
-  name                 = var.ecr_repo
+  name                 = lower(var.project_name)
   image_tag_mutability = "MUTABLE"
 
   lifecycle {
@@ -7,7 +7,7 @@ resource "aws_ecr_repository" "pointrapp" {
   }
 
   tags = {
-    application     = "pointrapp"
+    application     = var.project_name
   }
 }
 

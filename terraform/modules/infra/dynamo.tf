@@ -3,7 +3,7 @@
 # ===========================================================
 
 resource "aws_dynamodb_table" "pointrapp" {
-  name         = "PointrApp-${var.environment}"
+  name         = "${var.project_name}-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"
 
   deletion_protection_enabled = true
@@ -75,8 +75,8 @@ resource "aws_dynamodb_table" "pointrapp" {
   }
 
   tags = {
-    Project = "PointrApp"
-    Env     = var.environment
+    Environment = var.environment
+    Application = var.project_name
   }
 }
 

@@ -14,8 +14,8 @@ resource "aws_iam_role" "apprunner_access_role" {
   })
 
   tags = {
-    application = "pointrapp"
-
+      Environment = var.environment
+    Application = var.project_name
   }
 }
 
@@ -58,7 +58,8 @@ resource "aws_iam_role" "apprunner_instance_role" {
   })
 
   tags = {
-    application = "pointrapp"
+    Environment = var.environment
+    Application = var.project_name
   }
 }
 

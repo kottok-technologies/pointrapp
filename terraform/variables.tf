@@ -1,3 +1,9 @@
+variable "project_name" {
+  type        = string
+  description = "Name of this project"
+  default     = "PointrApp"
+}
+
 variable "environment" {
   type        = string
   description = "Environment name (prod/dev)"

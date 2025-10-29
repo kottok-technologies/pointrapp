@@ -61,7 +61,13 @@ jobs:
           docker login --username AWS --password-stdin \
           ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
-      # 🐳 Step 6: Build & Push Docker Image
+      # 🔑 Step 6: Build env file
+      - name: Generate .env.production
+        run: |
+          chmod +x scripts/generate_env.sh
+          ./scripts/generate_env.sh
+
+      # 🐳 Step 7: Build & Push Docker Image
       - name: Build and Push Docker Image
         run: |
           IMAGE_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
@@ -69,18 +75,17 @@ jobs:
           docker push $IMAGE_URI
           echo "image_uri=$IMAGE_URI" >> $GITHUB_ENV
 
-      # 🏗️ Step 7: Select or create Terraform workspace
+      # 🏗️ Step 8: Select or create Terraform workspace
       - name: Select Terraform workspace
         run: |
           terraform -chdir=${{ env.TERRAFORM_DIR }} workspace select $WORKSPACE || \
           terraform -chdir=${{ env.TERRAFORM_DIR }} workspace new $WORKSPACE
           echo "Using Terraform workspace: $WORKSPACE"
 
-      # ⚙️ Step 8: Terraform Apply (App + DynamoDB)
+      # ⚙️ Step 9: Terraform Apply (App + DynamoDB)
       - name: Terraform Apply Environment Infra
         run: |
           terraform -chdir=${{ env.TERRAFORM_DIR }} apply -auto-approve \
             -var="image_uri=${{ env.image_uri }}" \
             -var="environment=${{ env.WORKSPACE }}" \
             -target=module.infra
-          

@@ -1,5 +1,5 @@
 resource "aws_apprunner_service" "pointrapp" {
-  service_name = "pointrapp-${var.environment}"
+  service_name = "${var.project_name}-${var.environment}"
 
   source_configuration {
     authentication_configuration {
@@ -24,7 +24,7 @@ resource "aws_apprunner_service" "pointrapp" {
 
   tags = {
     Environment = var.environment
-    Project     = "PointrApp"
+    Application = var.project_name
   }
 }
 

@@ -1,4 +1,4 @@
-variable "ecr_repo" {
-  type        = string
-  default     = "pointrapp"
+variable "project_name" {
+  type = string
+  description = "Identifier for the project."
 }
