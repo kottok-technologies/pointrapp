@@ -29,7 +29,11 @@ variable "dns_target" {
 }
 
 variable "certificate_validation_records" {
-  type        = list(string)
-  description = "Records to validate in Route 53"
-  default     = []
+  description = "Certificate validation records returned from App Runner"
+  type = list(object({
+    name  = string
+    type  = string
+    value = string
+  }))
+  default = []
 }
