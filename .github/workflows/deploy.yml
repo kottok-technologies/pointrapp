@@ -94,8 +94,9 @@ jobs:
       - name: Capture Terraform Outputs
         run: |
           terraform -chdir=${{ env.TERRAFORM_DIR }} output -json > tf_outputs.json
-          echo "dns_target=$(jq -r 'dns_target.value' tf_outputs.json)" >> $GITHUB_ENV
-          echo "certificate_validation_records=$(jq -c 'certificate_validation_records.value // []' tf_outputs.json)" >> $GITHUB_ENV
+          cat tf_outputs.json
+          echo "dns_target=$(jq -r '.dns_target.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "certificate_validation_records=$(jq -c '.certificate_validation_records.value // []' tf_outputs.json)" >> $GITHUB_ENV
           echo "✅ Captured dns_target: $dns_target"
           echo "✅ Captured certificate_validation_records"
 
