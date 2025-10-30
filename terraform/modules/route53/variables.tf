@@ -1,24 +1,12 @@
-variable "project_name" {
-  type        = string
-  description = "Name of this project"
-  default     = "PointrApp"
-}
-
 variable "environment" {
   type        = string
   description = "Environment name (prod/dev)"
   default     = "dev"
 }
 
-variable "image_uri" {
-  type        = string
-  description = "ECR image URI to deploy"
-  default     = "placeholder"
-}
-
 variable "route53_zone_id" {
   type        = string
-  description = "Zone ID for pointrapp in R53"
+  description = "Zone ID for PointrApp in R53"
   default     = "Z021125431208XT5W7T05"
 }
 
@@ -31,5 +19,5 @@ variable "dns_target" {
 variable "certificate_validation_records" {
   type        = list(string)
   description = "Records to validate in Route 53"
-  default     = []
+  default     = ["none"]
 }

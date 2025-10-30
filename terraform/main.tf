@@ -10,3 +10,11 @@ module "infra" {
   environment = var.environment
   route53_zone_id = var.route53_zone_id
 }
+
+module "route53" {
+  source = "./modules/route53"
+  environment = var.environment
+  route53_zone_id = var.route53_zone_id
+  dns_target = var.dns_target
+  certificate_validation_records = var.certificate_validation_records
+}

@@ -33,3 +33,11 @@ resource "aws_apprunner_custom_domain_association" "domain" {
   service_arn = aws_apprunner_service.pointrapp.arn
   domain_name = var.environment == "dev" ? "dev.pointrapp.com" : "www.pointrapp.com"
 }
+
+output "dns_target" {
+  value = aws_apprunner_custom_domain_association.domain.dns_target
+}
+
+output "certificate_validation_records"  {
+  value = aws_apprunner_custom_domain_association.domain.certificate_validation_records
+}
