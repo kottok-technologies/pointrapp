@@ -8,10 +8,17 @@ resource "aws_route53_record" "subdomain" {
 }
 
 # Validation record for ACM certificate (DNS-01 challenge)
+locals {
+  safe_validation_records = (
+    var.certificate_validation_records != null
+    ? var.certificate_validation_records
+    : []
+  )
+}
+
 resource "aws_route53_record" "validation" {
   for_each = {
-    for r in try(var.certificate_validation_records, []) :
-    r.name => r
+    for r in local.safe_validation_records : r.name => r
   }
   zone_id = var.route53_zone_id
   name    = each.value.name
