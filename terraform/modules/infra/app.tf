@@ -41,3 +41,7 @@ output "dns_target" {
 output "certificate_validation_records"  {
   value = aws_apprunner_custom_domain_association.domain.certificate_validation_records
 }
+
+output "service_arn" {
+  value = aws_apprunner_service.pointrapp.arn
+}
