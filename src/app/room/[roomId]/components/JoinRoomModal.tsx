@@ -1,14 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRoom } from "../context/RoomContext";
 
 export function JoinRoomModal() {
     const { currentUser, actions } = useRoom();
+
+    // ✅ Initialize name safely (no SSR access)
     const [name, setName] = useState("");
-    const [role, setRole] = useState<"facilitator" | "participant" | "observer">("participant");
+    const [role, setRole] = useState<"facilitator" | "participant" | "observer">(
+        "participant"
+    );
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // ✅ Load name only after client mount
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("pointrapp:displayName");
+            if (saved) setName(saved);
+        }
+    }, []);
+
+    // ✅ Persist whenever name changes (only if in browser)
+    useEffect(() => {
+        if (typeof window !== "undefined" && name.trim().length > 0) {
+            localStorage.setItem("pointrapp:displayName", name);
+        }
+    }, [name]);
 
     // If user already joined, hide modal
     if (currentUser) return null;
@@ -25,19 +44,15 @@ export function JoinRoomModal() {
         try {
             await actions.joinRoom(name.trim(), role);
         } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError("Failed to join room");
-            }
+            if (err instanceof Error) setError(err.message);
+            else setError("Failed to join room");
         } finally {
             setLoading(false);
         }
-
     }
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
                     Join the Room
@@ -49,7 +64,7 @@ export function JoinRoomModal() {
                         placeholder="Your name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring focus:ring-blue-100"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:ring focus:ring-blue-100"
                         disabled={loading}
                     />
 
@@ -57,8 +72,7 @@ export function JoinRoomModal() {
                         {(["facilitator", "participant", "observer"] as const).map((r) => (
                             <label
                                 key={r}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition
-                  ${
+                                className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition ${
                                     role === r
                                         ? "bg-blue-50 border-blue-400 text-blue-700"
                                         : "border-gray-200 hover:border-gray-300 text-gray-700"

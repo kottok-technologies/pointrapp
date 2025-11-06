@@ -5,12 +5,15 @@ import React, {
     useContext,
     useState,
     useEffect,
-    ReactNode,
     useMemo,
+    ReactNode,
 } from "react";
-import toast from "react-hot-toast";
 import { useRoomData } from "../hooks/useRoomData";
 import { User, Story, Room } from "@/lib/types";
+
+// -----------------------------------------------------------
+// Context Interfaces
+// -----------------------------------------------------------
 
 interface RoomContextValue {
     room: Room | null;
@@ -34,6 +37,10 @@ interface RoomActions {
     submitVote: (storyId: string, value: string) => Promise<void>;
 }
 
+// -----------------------------------------------------------
+// Context Setup
+// -----------------------------------------------------------
+
 const RoomContext = createContext<RoomContextValue | undefined>(undefined);
 
 interface RoomProviderProps {
@@ -43,34 +50,29 @@ interface RoomProviderProps {
 
 const STORAGE_KEY = (roomId: string) => `pointrapp:user:${roomId}`;
 
+// -----------------------------------------------------------
+// Provider Component
+// -----------------------------------------------------------
+
 export function RoomProvider({ roomId, children }: RoomProviderProps) {
     const { room, users, stories, loading, error, refresh } = useRoomData(roomId);
+    const [activeStory, setActiveStory] = useState<Story | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-    // --- Restore user from localStorage lazily ---
-    const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    // 🧠 Load persisted user session (if exists)
+    useEffect(() => {
         try {
             const saved = localStorage.getItem(STORAGE_KEY(roomId));
-            return saved ? (JSON.parse(saved) as User) : null;
-        } catch {
-            return null;
+            if (saved) {
+                const parsed: User = JSON.parse(saved);
+                setCurrentUser(parsed);
+            }
+        } catch (err) {
+            console.error("❌ Failed to load user session:", err);
         }
-    });
-
-    const [activeStory, setActiveStory] = useState<Story | null>(null);
-
-    // --- Toast when restoring a saved user session ---
-    useEffect(() => {
-        if (currentUser) {
-            toast.success(`Welcome back, ${currentUser.name}! 👋`, {
-                id: "welcome-toast",
-                duration: 3000,
-            });
-        }
-        // only trigger on first mount for this roomId
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [roomId]);
 
-    // --- Persist user whenever it changes ---
+    // 💾 Persist user whenever it changes
     useEffect(() => {
         if (currentUser) {
             localStorage.setItem(STORAGE_KEY(roomId), JSON.stringify(currentUser));
@@ -79,7 +81,7 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
         }
     }, [currentUser, roomId]);
 
-    // --- Auto-pick active story ---
+    // 🧩 Auto-pick first story in estimating state
     useEffect(() => {
         if (!activeStory && stories.length > 0) {
             const estimating = stories.find((s) => s.status === "estimating");
@@ -87,7 +89,10 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
         }
     }, [stories, activeStory]);
 
-    // --- Actions ---
+    // -----------------------------------------------------------
+    // Actions (CRUD-style, tied to API routes)
+    // -----------------------------------------------------------
+
     const actions: RoomActions = useMemo(
         () => ({
             async addStory(title: string, description?: string) {
@@ -124,6 +129,7 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ name, role }),
                 });
+
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || "Failed to join room");
 
@@ -138,13 +144,12 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                 setCurrentUser(newUser);
                 localStorage.setItem(STORAGE_KEY(roomId), JSON.stringify(newUser));
                 await refresh();
-
-                toast.success(`Welcome, ${name}! 🎉`);
                 return newUser;
             },
 
             async submitVote(storyId: string, value: string) {
                 if (!currentUser) throw new Error("You must join the room first");
+
                 await fetch(`/api/rooms/${roomId}/votes`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -154,11 +159,16 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                         value,
                     }),
                 });
+
                 await refresh();
             },
         }),
         [roomId, currentUser, refresh]
     );
+
+    // -----------------------------------------------------------
+    // Provide context value
+    // -----------------------------------------------------------
 
     const value: RoomContextValue = {
         room,
@@ -177,9 +187,14 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
     return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;
 }
 
-// --- Hook for safe context usage ---
+// -----------------------------------------------------------
+// Hook to use the RoomContext
+// -----------------------------------------------------------
+
 export function useRoom() {
     const context = useContext(RoomContext);
-    if (!context) throw new Error("useRoom must be used within a RoomProvider");
+    if (!context) {
+        throw new Error("useRoom must be used within a RoomProvider");
+    }
     return context;
 }

@@ -9,6 +9,7 @@ import {
     AttributeValue,
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
+import { fromSSO } from "@aws-sdk/credential-provider-sso";
 
 type AttrMap = Record<string, AttributeValue>;
 
@@ -16,9 +17,26 @@ type AttrMap = Record<string, AttributeValue>;
 // DynamoDB Client Setup
 // ============================================================
 
-export const dynamo = new DynamoDBClient({
-    region: process.env.AWS_REGION,
-});
+const isLocalhost =
+    process.env.HOSTNAME === "localhost" || process.env.HOST === "localhost" || process.env.NODE_ENV === "development";
+
+// Dynamically configure the client based on the environment
+const getDynamoClient = () => {
+    if (isLocalhost) {
+        return new DynamoDBClient({
+            region: process.env.AWS_REGION,
+            credentials: fromSSO({
+                profile: process.env.AWS_PROFILE_NAME,
+            }),
+        });
+    }
+    return new DynamoDBClient({
+        region: process.env.AWS_REGION,
+        // default credentials chain
+    });
+};
+
+const dynamo = getDynamoClient();
 
 const TableName = process.env.DYNAMODB_TABLE_NAME!;
 if (!TableName)

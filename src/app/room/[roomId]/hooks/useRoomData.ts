@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { User, Story, Room} from "@/lib/types";
+import { User, Story, Room } from "@/lib/types";
 
 interface RoomResponse {
     room: Room;
     users: User[];
     stories: Story[];
-    error: string;
+    error?: string;
 }
 
 interface UseRoomDataReturn {
@@ -19,23 +19,27 @@ interface UseRoomDataReturn {
     refresh: () => Promise<void>;
 }
 
-export function useRoomData(roomId: string, intervalMs = 10000): UseRoomDataReturn {
+export function useRoomData(roomId: string): UseRoomDataReturn {
     const [room, setRoom] = useState<Room | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [stories, setStories] = useState<Story[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // ✅ Memoize fetchRoomData so its reference is stable across renders
+    /**
+     * 🔁 Fetches the latest room data once or when manually called.
+     * Can be safely reused by other components or actions via `refresh()`.
+     */
     const fetchRoomData = useCallback(async () => {
         if (!roomId) return;
+
         setLoading(true);
         setError(null);
 
         try {
             const res = await fetch(`/api/rooms/${roomId}`, { cache: "no-store" });
-
             const data: RoomResponse = await res.json();
+
             if (!res.ok) throw new Error(data.error ?? "Failed to load room data");
 
             setRoom(data.room);
@@ -51,18 +55,15 @@ export function useRoomData(roomId: string, intervalMs = 10000): UseRoomDataRetu
         } finally {
             setLoading(false);
         }
-    }, [roomId]); // ✅ depends only on roomId
+    }, [roomId]);
 
-    // ✅ Now your useEffect sees a stable dependency
+    /**
+     * 🧩 Fetch once on mount or when the roomId changes.
+     * No continuous polling — this runs only once per room.
+     */
     useEffect(() => {
         fetchRoomData();
     }, [fetchRoomData]);
-
-    useEffect(() => {
-        fetchRoomData();
-        const interval = setInterval(fetchRoomData, intervalMs);
-        return () => clearInterval(interval);
-    }, [fetchRoomData, intervalMs, roomId]);
 
     return {
         room,

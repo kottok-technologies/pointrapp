@@ -24,3 +24,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* === Input Readability Fix === */
+input,
+textarea,
+select {
+    @apply text-gray-900 placeholder:text-gray-500;
+}
+
+/* Optional: improve contrast when disabled */
+input:disabled,
+textarea:disabled,
+select:disabled {
+    @apply text-gray-500 bg-gray-100;
+}
+
+/* Optional: darken autofill text in Chrome/Safari */
+input:-webkit-autofill {
+    -webkit-text-fill-color: #111827 !important; /* Tailwind gray-900 */
+    box-shadow: 0 0 0px 1000px white inset;
+}
