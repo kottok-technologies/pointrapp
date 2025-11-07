@@ -47,6 +47,13 @@ jobs:
       - name: Terraform Init
         run: terraform -chdir=${{ env.TERRAFORM_DIR }} init
 
+      # Step 4: Build our lambdas
+      - name: Build Lambdas
+        run: |
+          chmod +x scripts/package_lambdas.sh
+          ./scripts/package_lambdas.sh
+          ls -lah
+
       # 🧰 Step 4: Create or ensure global ECR (only once)
       - name: Terraform Apply Global ECR
         run: |
