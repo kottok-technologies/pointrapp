@@ -45,8 +45,8 @@ export async function POST(
         const timestamp = new Date().toISOString();
 
         const voteItem: Vote = {
-            PK: `ROOM#${roomId}`,
-            SK: `VOTE#${voteId}`,
+            pK: `ROOM#${roomId}`,
+            sK: `VOTE#${voteId}`,
             id: voteId,
             storyId: parsed.storyId,
             userId: parsed.userId,

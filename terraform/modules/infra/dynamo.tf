@@ -81,6 +81,32 @@ resource "aws_dynamodb_table" "pointrapp" {
 }
 
 # ===========================================================
+# WebSocket Table for event handling
+# ===========================================================
+
+resource "aws_dynamodb_table" "ws_connections" {
+  name         = "pointrapp_ws_connections_${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "ConnectionId"
+
+  attribute {
+    name = "ConnectionId"
+    type = "S"
+  }
+
+  attribute {
+    name = "RoomId"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "RoomIdIndex"
+    hash_key        = "RoomId"
+    projection_type = "ALL"
+  }
+}
+
+# ===========================================================
 # Outputs
 # ===========================================================
 

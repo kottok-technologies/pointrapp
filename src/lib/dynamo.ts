@@ -41,6 +41,54 @@ const dynamo = getDynamoClient();
 const TableName = process.env.DYNAMODB_TABLE_NAME!;
 if (!TableName)
     throw new Error("❌ Missing DYNAMODB_TABLE_NAME env variable");
+/**
+ * Converts PascalCase or snake_case keys to camelCase recursively.
+ */
+function toCamelCaseKeys<T>(obj: unknown): T {
+    if (Array.isArray(obj)) {
+        // Recursively process each array element
+        return obj.map((item) => toCamelCaseKeys(item)) as unknown as T;
+    }
+
+    if (obj && typeof obj === "object") {
+        const result: Record<string, unknown> = {};
+
+        for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+            const camelKey = key
+                .charAt(0)
+                .toLowerCase()
+                .concat(key.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase()));
+
+            result[camelKey] = toCamelCaseKeys(value);
+        }
+
+        return result as T;
+    }
+
+    return obj as T;
+}
+
+/**
+ * Converts camelCase keys to PascalCase recursively.
+ */
+function toPascalCaseKeys<T>(obj: unknown): T {
+    if (Array.isArray(obj)) {
+        return obj.map((item) => toPascalCaseKeys(item)) as unknown as T;
+    }
+
+    if (obj && typeof obj === "object") {
+        const result: Record<string, unknown> = {};
+
+        for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+            const pascalKey = key.charAt(0).toUpperCase() + key.slice(1);
+            result[pascalKey] = toPascalCaseKeys(value);
+        }
+
+        return result as T;
+    }
+
+    return obj as T;
+}
 
 // ============================================================
 // Utility Helpers
@@ -48,12 +96,14 @@ if (!TableName)
 
 /** Helper for marshalling values safely (returns AttrMap). */
 function safeMarshall<T extends object>(obj: T): AttrMap {
-    return marshall(obj, { removeUndefinedValues: true }) as AttrMap;
+    const pascalized = toPascalCaseKeys(obj); // ✅ convert to PascalCase before saving
+    return marshall(pascalized, { removeUndefinedValues: true }) as AttrMap;
 }
 
 /** Helper for unmarshalling values safely (accepts AttrMap). */
 function safeUnmarshall<T>(item: AttrMap): T {
-    return unmarshall(item) as T;
+    const raw = unmarshall(item);
+    return toCamelCaseKeys<T>(raw); // ✅ convert Dynamo keys to camelCase
 }
 
 // ============================================================

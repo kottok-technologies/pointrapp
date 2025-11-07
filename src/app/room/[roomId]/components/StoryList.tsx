@@ -5,7 +5,7 @@ import { useRoom } from "../context/RoomContext";
 import {FacilitatorControls} from "./FacilitatorControls";
 
 export function StoryList() {
-    const { stories, activeStory, setActiveStory, refresh } = useRoom();
+    const { room, stories, activeStory, setActiveStory, refresh } = useRoom();
     const [newTitle, setNewTitle] = useState("");
     const [adding, setAdding] = useState(false);
     const [message, setMessage] = useState("");
@@ -16,7 +16,7 @@ export function StoryList() {
         setMessage("");
 
         try {
-            const res = await fetch(`/api/rooms/${activeStory?.roomId || ""}/stories`, {
+            const res = await fetch(`/api/rooms/${room?.id || ""}/stories`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ title: newTitle }),

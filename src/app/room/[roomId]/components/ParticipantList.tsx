@@ -4,13 +4,11 @@ import { useRoom } from "../context/RoomContext";
 import Image from "next/image";
 
 export function ParticipantList() {
-    const { users, loading } = useRoom();
+    const { users } = useRoom();
 
     return (
         <div>
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Participants</h2>
-
-            {loading && <p className="text-sm text-gray-400 mb-2">Updating...</p>}
 
             {users.length === 0 && (
                 <p className="text-sm text-gray-400">No participants yet.</p>

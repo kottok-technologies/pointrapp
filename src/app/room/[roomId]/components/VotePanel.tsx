@@ -1,24 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoom } from "../context/RoomContext";
 
 const DEFAULT_DECK = ["0", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?"];
 
 export function VotePanel() {
-    const { room, activeStory, currentUser, refresh } = useRoom();
+    const { room, activeStory, currentUser, votes, refresh } = useRoom();
     const [selected, setSelected] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
 
-    async function handleVote(value: string) {
-        if (!activeStory) {
-            setMessage("Select a story first!");
+    const STORAGE_KEY = (roomId: string, storyId: string, userId: string) =>
+        `pointrapp:vote:${roomId}:${storyId}:${userId}`;
+
+    // ✅ Initialize selection: localStorage → backend → null
+    useEffect(() => {
+        if (!room?.id || !activeStory?.id || !currentUser?.id) return;
+
+        const key = STORAGE_KEY(room.id, activeStory.id, currentUser.id);
+        const local = localStorage.getItem(key);
+
+        if (activeStory.status === "estimating") {
+            // 🧹 Clear vote if story is being revoted
+            localStorage.removeItem(key);
+            setSelected(null);
             return;
         }
 
-        if (!currentUser) {
-            setMessage("You must join the room first.");
+        if (local) {
+            setSelected(local);
+        } else {
+            const backendVote =
+                votes.find(
+                    (v) => v.userId === currentUser.id && v.storyId === activeStory.id
+                )?.value ?? null;
+            setSelected(backendVote);
+        }
+    }, [room?.id, activeStory?.id, activeStory?.status, currentUser?.id, votes]);
+
+    // ✅ Persist selection locally whenever it changes
+    useEffect(() => {
+        if (room?.id && activeStory?.id && currentUser?.id && selected) {
+            localStorage.setItem(
+                STORAGE_KEY(room.id, activeStory.id, currentUser.id),
+                selected
+            );
+        }
+    }, [selected, room?.id, activeStory?.id, currentUser?.id]);
+
+    async function handleVote(value: string) {
+        if (!activeStory || !currentUser) {
+            setMessage("Select a story and join the room first!");
             return;
         }
 
@@ -41,13 +74,14 @@ export function VotePanel() {
             if (!res.ok) throw new Error(data.error || "Vote failed");
 
             setMessage("Vote recorded!");
+            localStorage.setItem(
+                STORAGE_KEY(room?.id || "", activeStory.id, currentUser.id),
+                value
+            );
+
             await refresh();
         } catch (err) {
-            if (err instanceof Error) {
-                setMessage(err.message);
-            } else {
-                setMessage("Failed to record vote");
-            }
+            setMessage(err instanceof Error ? err.message : "Failed to record vote");
             setSelected(null);
         } finally {
             setLoading(false);
@@ -65,12 +99,11 @@ export function VotePanel() {
                         disabled={loading}
                         onClick={() => handleVote(value)}
                         className={`rounded-xl px-4 py-3 text-lg font-medium shadow-sm border transition
-              ${
+            ${
                             selected === value
                                 ? "bg-blue-600 text-white border-blue-600"
                                 : "bg-white hover:bg-blue-50 border-gray-300 text-gray-700"
-                        }
-            `}
+                        }`}
                     >
                         {value}
                     </button>

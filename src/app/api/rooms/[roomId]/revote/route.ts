@@ -45,13 +45,13 @@ export async function POST(
         const votesToDelete = allItems.filter(
             (vote) =>
                 vote.storyId === parsed.storyId &&
-                vote.PK.startsWith(`ROOM#${roomId}`) &&
-                vote.SK.startsWith("VOTE#")
+                vote.pK.startsWith(`ROOM#${roomId}`) &&
+                vote.sK.startsWith("VOTE#")
         );
 
         // 🧹 Remove existing votes
         for (const vote of votesToDelete) {
-            await deleteItem(vote.PK, vote.SK);
+            await deleteItem(vote.pK, vote.sK);
         }
 
         // 🔄 Reset story status for re-estimation

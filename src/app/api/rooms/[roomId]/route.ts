@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { queryByPK, getItem } from "@/lib/dynamo";
-import type { Room, User, Story } from "@/lib/types";
+import type {Room, User, Story, Vote} from "@/lib/types";
 
 // ✅ GET /api/rooms/[roomId]
 export async function GET(
@@ -20,9 +20,11 @@ export async function GET(
             );
         }
 
+        console.log(roomItem);
+
         // Normalize room to match our Room interface
         const room: Room = {
-            id: String(roomItem.id ?? roomId),
+            id: String(roomItem.roomId ?? roomId),
             name: String(roomItem.name ?? "Untitled Room"),
             createdBy: String(roomItem.createdBy ?? ""),
             deckType: (roomItem.deckType as Room["deckType"]) ?? "fibonacci",
@@ -41,7 +43,7 @@ export async function GET(
         const items = await queryByPK<Record<string, unknown>>(pk);
 
         const users: User[] = items
-            .filter((i) => i.EntityType === "User")
+            .filter((i) => i.entityType === "User")
             .map((u) => ({
                 id: String(u.id ?? crypto.randomUUID()),
                 name: String(u.name ?? "Unnamed"),
@@ -55,7 +57,7 @@ export async function GET(
             }));
 
         const stories: Story[] = items
-            .filter((i) => i.EntityType === "Story")
+            .filter((i) => i.entityType === "Story")
             .map((s) => ({
                 id: String(s.id ?? crypto.randomUUID()),
                 roomId: String(s.roomId ?? roomId),
@@ -77,12 +79,26 @@ export async function GET(
                 createdAt: String(s.createdAt ?? new Date().toISOString()),
             }));
 
+        const votes: Vote[] = items
+            .filter((i) => i.entityType === "Vote")
+            .map((v) => ({
+                pK: String(v.pK),
+                sK: String(v.sK),
+                id: String(v.id),
+                storyId: String(v.storyId),
+                userId: String(v.userId),
+                roomId: String(v.roomId),
+                value: String(v.value),
+                createdAt: String(v.createdAt),
+            }));
+
         // 3️⃣ Return structured response
         return NextResponse.json(
             {
                 room,
                 users,
                 stories,
+                votes
             },
             { status: 200 }
         );
