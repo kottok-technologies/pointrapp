@@ -2,6 +2,7 @@
 
 import {useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function HomePage() {
     const router = useRouter();
@@ -36,10 +37,14 @@ export default function HomePage() {
     return (
         <main className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
             <div className="w-full max-w-sm bg-white p-6 rounded-xl shadow">
-                <h1 className="text-3xl font-bold text-center mb-6 text-black">
-                    Pointr
-                </h1>
-
+                <div className={"flex justify-center items-center"}>
+                    <Image
+                        src={"/images/logo.png"}
+                        alt={"Pointr App Logo"}
+                        width={250}
+                        height={250}
+                    />
+                </div>
                 <input
                     type="text"
                     placeholder="Your name"
