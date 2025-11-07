@@ -10,6 +10,9 @@ const jura = Jura({
 export const metadata: Metadata = {
   title: "Pointr App",
   description: "Pointing Poker Application",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -19,9 +22,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-    <head>
-        <link rel="shortcut icon" href="/favicon.ico" />
-    </head>
       <body
         className={`${jura.className} antialiased`}
       >
