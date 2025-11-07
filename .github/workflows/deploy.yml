@@ -55,27 +55,27 @@ jobs:
           echo "📂 Verifying built Lambda packages..."
           ls -lah terraform/modules/infra/lambdas/dist
 
-      # 🧰 Step 4: Create or ensure global ECR (only once)
+      # 🧰 Step 5: Create or ensure global ECR (only once)
       - name: Terraform Apply Global ECR
         run: |
           terraform -chdir=${{ env.TERRAFORM_DIR }} apply \
             -auto-approve \
             -target=module.ecr
 
-      # 🔑 Step 5: Login to ECR
+      # 🔑 Step 6: Login to ECR
       - name: Login to ECR
         run: |
           aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
           docker login --username AWS --password-stdin \
           ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
-      # 🔑 Step 6: Build env file
+      # 🔑 Step 7: Build env file
       - name: Generate .env.production
         run: |
           chmod +x scripts/generate_env.sh
           ./scripts/generate_env.sh
 
-      # 🐳 Step 7: Build & Push Docker Image
+      # 🐳 Step 8: Build & Push Docker Image
       - name: Build and Push Docker Image
         run: |
           IMAGE_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
@@ -83,14 +83,14 @@ jobs:
           docker push $IMAGE_URI
           echo "image_uri=$IMAGE_URI" >> $GITHUB_ENV
 
-      # 🏗️ Step 8: Select or create Terraform workspace
+      # 🏗️ Step 9: Select or create Terraform workspace
       - name: Select Terraform workspace
         run: |
           terraform -chdir=${{ env.TERRAFORM_DIR }} workspace select $WORKSPACE || \
           terraform -chdir=${{ env.TERRAFORM_DIR }} workspace new $WORKSPACE
           echo "Using Terraform workspace: $WORKSPACE"
 
-      # ⚙️ Step 9: Terraform Apply (App + DynamoDB)
+      # ⚙️ Step 10: Terraform Apply (App + DynamoDB)
       - name: Terraform Apply Environment Infra
         run: |
           terraform -chdir=${{ env.TERRAFORM_DIR }} apply -auto-approve \
@@ -98,7 +98,7 @@ jobs:
             -var="environment=${{ env.WORKSPACE }}" \
             -target=module.infra
 
-      # 💾 Step 10: Capture Terraform Outputs for DNS + Certificate
+      # 💾 Step 11: Capture Terraform Outputs for DNS + Certificate
       - name: Capture Terraform Outputs
         run: |
           terraform -chdir=${{ env.TERRAFORM_DIR }} output -json > tf_outputs.json
@@ -108,7 +108,7 @@ jobs:
           echo "✅ Captured dns_target: $dns_target"
           echo "✅ Captured certificate_validation_records"
 
-      # ⚙️ Step 11: Terraform Apply (Route53)
+      # ⚙️ Step 12: Terraform Apply (Route53)
       - name: Terraform Apply Route53
         run: |
           terraform -chdir=${{ env.TERRAFORM_DIR }} apply -auto-approve \
@@ -117,7 +117,7 @@ jobs:
             -var="environment=${{ env.WORKSPACE }}" \
             -target=module.route53
 
-      # 🕐 Step 12: Wait for App Runner Certificate Validation
+      # 🕐 Step 13: Wait for App Runner Certificate Validation
       - name: Wait for App Runner Certificate Validation
         run: |
           echo "🕐 Waiting for App Runner certificate validation..."
