@@ -1,8 +1,8 @@
-import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
-import {
+const { DynamoDBClient, QueryCommand } = require("@aws-sdk/client-dynamodb");
+const  {
     ApiGatewayManagementApiClient,
     PostToConnectionCommand,
-} from "@aws-sdk/client-apigatewaymanagementapi";
+} = require("@aws-sdk/client-apigatewaymanagementapi");
 
 const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
 

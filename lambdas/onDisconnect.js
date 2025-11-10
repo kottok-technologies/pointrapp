@@ -1,4 +1,4 @@
-import { DynamoDBClient, DeleteItemCommand } from "@aws-sdk/client-dynamodb";
+const { DynamoDBClient, DeleteItemCommand } = require("@aws-sdk/client-dynamodb");
 
 const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
 
