@@ -6,7 +6,7 @@ const  {
 
 const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
 
-const handler = async (event) => {
+exports.handler = async (event) => {
     console.log("broadcast event:", event);
 
     const body = JSON.parse(event.body ?? "{}");

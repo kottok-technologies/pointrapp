@@ -2,7 +2,7 @@ const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
 
 const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
 
-const handler = async (event) => {
+exports.handler = async (event) => {
     console.log("onConnect event:", event);
 
     const connectionId = event.requestContext.connectionId;
