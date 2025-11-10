@@ -110,14 +110,13 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
             console.warn("⚠️ NEXT_PUBLIC_WS_URL not defined, skipping WebSocket connection");
             return;
         }
-
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
             console.log("🔌 Connected to WebSocket gateway");
             // Optionally register the room
-            ws.send(JSON.stringify({ action: "register", roomId }));
+            //ws.send(JSON.stringify({ action: "broadcast", type: "register", roomId: roomId }));
         };
 
         ws.onmessage = async (event) => {
@@ -126,6 +125,10 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                 console.log("📨 WebSocket message:", msg);
 
                 switch (msg.type) {
+                    case "connection_ack":
+                        console.log("✅ Received connectionId:", msg.connectionId);
+                        localStorage.setItem("pointrapp:connectionId", msg.connectionId);
+                        break;
                     case "userJoined":
                         console.log(`👤 ${msg.data.name} joined the room`);
                         await refresh();
@@ -159,7 +162,7 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
         return () => {
             ws.close();
         };
-    }, [roomId, refresh]);
+    }, [roomId]);
 
     // -----------------------------------------------------------
     // Actions
@@ -196,10 +199,12 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
             },
 
             async joinRoom(name: string, role: User["role"]) {
+                const connectionId = localStorage.getItem("pointrapp:connectionId");
+
                 const res = await fetch(`/api/rooms/${roomId}/join`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, role }),
+                    body: JSON.stringify({ name, role, ...(connectionId != null ? { connectionId } : {}),}),
                 });
 
                 const data = await res.json();
@@ -221,8 +226,9 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                 if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
                     wsRef.current.send(
                         JSON.stringify({
-                            action: "join",
-                            roomId,
+                            action: "broadcast",
+                            type: "join",
+                            roomId: roomId,
                             userId: newUser.id,
                             name: newUser.name,
                             role: newUser.role,

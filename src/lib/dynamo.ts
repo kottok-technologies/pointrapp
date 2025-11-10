@@ -41,6 +41,10 @@ const dynamo = getDynamoClient();
 const TableName = process.env.DYNAMODB_TABLE_NAME!;
 if (!TableName)
     throw new Error("❌ Missing DYNAMODB_TABLE_NAME env variable");
+
+const ConnectionTableName = process.env.CONNECTIONS_TABLE!;
+if (!ConnectionTableName)
+    throw new Error("❌ Missing CONNECTIONS_TABLE env variable");
 /**
  * Converts PascalCase or snake_case keys to camelCase recursively.
  */
@@ -205,4 +209,33 @@ export async function scanAll<T>(): Promise<T[]> {
     const params = { TableName };
     const { Items } = await dynamo.send(new ScanCommand(params));
     return (Items || []).map((i) => safeUnmarshall<T>(i as AttrMap));
+}
+
+/** Query table by RoomId **/
+export async function queryByRoomId<T>(roomId: string, indexName = "RoomIdIndex"): Promise<T[]> {
+    const params = {
+        TableName: ConnectionTableName,
+        IndexName: indexName,
+        KeyConditionExpression: "RoomId = :r",
+        ExpressionAttributeValues: {
+            ":r": { S: roomId },
+        },
+    };
+
+    const { Items } = await dynamo.send(new QueryCommand(params));
+    return (Items || []).map((i) => safeUnmarshall<T>(i as AttrMap));
+}
+
+/** Update connection with RoomId **/
+export async function updateRoomId(connectionId: string, roomId: string): Promise<void> {
+    const params = {
+        TableName: ConnectionTableName,
+        Key: marshall({ ConnectionId: connectionId }),
+        UpdateExpression: "SET RoomId = :r",
+        ExpressionAttributeValues: {
+            ":r": { S: roomId },
+        },
+    };
+
+    await dynamo.send(new UpdateItemCommand(params));
 }

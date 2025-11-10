@@ -49,21 +49,20 @@ export function useRoomData(roomId: string): UseRoomDataReturn {
 
             if (!res.ok) throw new Error(data.error ?? "Failed to load room data");
 
-            if (!shallowEqual(data.room, room)) setRoom(data.room);
-            if (!shallowEqual(data.users, users)) setUsers(data.users);
-            if (!shallowEqual(data.stories, stories)) setStories(data.stories);
-            if (!shallowEqual(data.votes, votes)) setVotes(data.votes);
+            // ✅ compare with previous states before setting
+            setRoom(prev => shallowEqual(prev, data.room) ? prev : data.room);
+            setUsers(prev => shallowEqual(prev, data.users) ? prev : data.users);
+            setStories(prev => shallowEqual(prev, data.stories) ? prev : data.stories);
+            setVotes(prev => shallowEqual(prev, data.votes) ? prev : data.votes);
         } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to fetch room data (unknown error)";
+            const message = err instanceof Error ? err.message : "Failed to fetch room data";
             console.error("❌ Failed to fetch room data:", message);
             setError(message);
         } finally {
             setLoading(false);
         }
-    }, [roomId, room, users, stories, votes]);
+    }, [roomId]);
+
 
     /**
      * 🧩 Fetch once on mount or when the roomId changes.

@@ -1,5 +1,6 @@
 const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
 const { marshall } = require("@aws-sdk/util-dynamodb");
+const {ApiGatewayManagementApiClient} = require("@aws-sdk/client-apigatewaymanagementapi");
 
 const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
 
@@ -8,16 +9,33 @@ exports.handler = async (event) => {
 
     try {
         const connectionId = event.requestContext.connectionId;
+        const domain = event.requestContext.domainName;
+        const stage = event.requestContext.stage;
 
-        // Optional: store connection
+        // Store connection
         await dynamo.send(
             new PutItemCommand({
                 TableName: process.env.CONNECTIONS_TABLE,
                 Item: marshall({
                     ConnectionId: connectionId,
-                    DomainName: event.requestContext.domainName,
-                    Stage: event.requestContext.stage,
+                    DomainName: domain,
+                    Stage: stage,
                     ConnectedAt: new Date().toISOString(),
+                }),
+            })
+        );
+
+        // Send a message back to the newly connected client
+        const api = new ApiGatewayManagementApiClient({
+            endpoint: `https://${domain}/${stage}`,
+        });
+
+        await api.send(
+            new PostToConnectionCommand({
+                ConnectionId: connectionId,
+                Data: JSON.stringify({
+                    type: "connection_ack",
+                    connectionId,
                 }),
             })
         );

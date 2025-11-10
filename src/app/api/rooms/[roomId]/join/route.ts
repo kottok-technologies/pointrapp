@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
-import { putItem, getItem } from "@/lib/dynamo";
+import {putItem, getItem, queryByRoomId, updateRoomId} from "@/lib/dynamo";
 import { nanoid } from "nanoid";
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
-import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
-import { unmarshall } from "@aws-sdk/util-dynamodb";
 
 // ✅ Schema for joining a room
 const JoinRoomSchema = z.object({
-    name: z.string().min(1, "Name is required"),
+    name: z.string().min(1),
     role: z.enum(["facilitator", "participant", "observer"]).default("participant"),
     avatarUrl: z.string().url().optional(),
+    connectionId: z.string().optional(),
 });
 
 export async function POST(
@@ -47,9 +46,11 @@ export async function POST(
             LastActiveAt: timestamp,
         };
 
-        console.log("IN join route")
-
         await putItem(userItem);
+
+        if(parsed.connectionId !== undefined) {
+            await updateRoomId(parsed.connectionId, roomId);
+        }
 
         // ✅ Broadcast new user joined
         try {
@@ -58,20 +59,16 @@ export async function POST(
                 console.warn("⚠️ Skipping broadcast: NEXT_PUBLIC_WS_URL not configured");
             } else {
 
-                const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
                 const api = new ApiGatewayManagementApiClient({
                     region: process.env.AWS_REGION,
                     endpoint: wsUrl.replace(/^wss/, "https"), // convert wss:// → https://
                 });
-                console.log("IN join route")
 
                 // Query active connections for this room (same logic as broadcast lambda)
-                const scanResult = await dynamo.send(
-                    new ScanCommand({ TableName: process.env.CONNECTIONS_TABLE })
-                );
-                const connections = (scanResult.Items || []).map((i) => unmarshall(i));
+                const connections = await queryByRoomId<{ ConnectionId: string; RoomId: string }>(roomId);
 
                 const payload = JSON.stringify({
+                    action: "broadcast",
                     type: "userJoined",
                     data: {
                         userId,
