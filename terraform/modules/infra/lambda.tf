@@ -12,7 +12,6 @@ resource "aws_lambda_function" "on_connect" {
   environment {
     variables = {
       CONNECTIONS_TABLE = aws_dynamodb_table.ws_connections.name
-      AWS_REGION        = var.aws_region
     }
   }
 }
@@ -27,7 +26,6 @@ resource "aws_lambda_function" "on_disconnect" {
   environment {
     variables = {
       CONNECTIONS_TABLE = aws_dynamodb_table.ws_connections.name
-      AWS_REGION        = var.aws_region
     }
   }
 }
@@ -42,7 +40,6 @@ resource "aws_lambda_function" "broadcast" {
   environment {
     variables = {
       CONNECTIONS_TABLE = aws_dynamodb_table.ws_connections.name
-      AWS_REGION        = var.aws_region
     }
   }
 }
