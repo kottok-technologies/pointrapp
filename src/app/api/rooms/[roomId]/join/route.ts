@@ -47,6 +47,8 @@ export async function POST(
             LastActiveAt: timestamp,
         };
 
+        console.log("IN join route")
+
         await putItem(userItem);
 
         // ✅ Broadcast new user joined
@@ -55,11 +57,13 @@ export async function POST(
             if (!wsUrl) {
                 console.warn("⚠️ Skipping broadcast: NEXT_PUBLIC_WS_URL not configured");
             } else {
+
                 const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
                 const api = new ApiGatewayManagementApiClient({
                     region: process.env.AWS_REGION,
                     endpoint: wsUrl.replace(/^wss/, "https"), // convert wss:// → https://
                 });
+                console.log("IN join route")
 
                 // Query active connections for this room (same logic as broadcast lambda)
                 const scanResult = await dynamo.send(

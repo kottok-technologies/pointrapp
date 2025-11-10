@@ -50,25 +50,31 @@ resource "aws_apigatewayv2_route" "broadcast_route" {
 }
 
 # --- Lambda Permissions ---
+# Allow $connect route
 resource "aws_lambda_permission" "connect_permission" {
+  statement_id  = "AllowConnect"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.on_connect.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/*"
+  source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/$connect"
 }
 
+# Allow $disconnect route
 resource "aws_lambda_permission" "disconnect_permission" {
+  statement_id  = "AllowDisconnect"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.on_disconnect.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/*"
+  source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/$disconnect"
 }
 
+# Allow broadcast route
 resource "aws_lambda_permission" "broadcast_permission" {
+  statement_id  = "AllowBroadcast"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.broadcast.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/*"
+  source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/broadcast"
 }
 
 ########################################
