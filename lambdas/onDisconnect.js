@@ -2,7 +2,7 @@ const { DynamoDBClient, DeleteItemCommand } = require("@aws-sdk/client-dynamodb"
 
 const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
 
-export const handler = async (event) => {
+const handler = async (event) => {
     console.log("onDisconnect event:", event);
 
     const connectionId = event.requestContext.connectionId;
