@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.927.0",
     "@aws-sdk/client-dynamodb": "^3.918.0",
     "@aws-sdk/util-dynamodb": "^3.918.0",
     "framer-motion": "^12.23.24",

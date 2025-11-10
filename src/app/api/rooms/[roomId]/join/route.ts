@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { putItem, getItem } from "@/lib/dynamo";
 import { nanoid } from "nanoid";
+import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
+import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
+import { unmarshall } from "@aws-sdk/util-dynamodb";
 
 // ✅ Schema for joining a room
 const JoinRoomSchema = z.object({
@@ -10,7 +13,6 @@ const JoinRoomSchema = z.object({
     avatarUrl: z.string().url().optional(),
 });
 
-// ✅ Route Handler
 export async function POST(
     req: Request,
     context: { params: Promise<{ roomId: string }> }
@@ -46,6 +48,53 @@ export async function POST(
         };
 
         await putItem(userItem);
+
+        // ✅ Broadcast new user joined
+        try {
+            const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+            if (!wsUrl) {
+                console.warn("⚠️ Skipping broadcast: NEXT_PUBLIC_WS_URL not configured");
+            } else {
+                const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
+                const api = new ApiGatewayManagementApiClient({
+                    region: process.env.AWS_REGION,
+                    endpoint: wsUrl.replace(/^wss/, "https"), // convert wss:// → https://
+                });
+
+                // Query active connections for this room (same logic as broadcast lambda)
+                const scanResult = await dynamo.send(
+                    new ScanCommand({ TableName: process.env.CONNECTIONS_TABLE })
+                );
+                const connections = (scanResult.Items || []).map((i) => unmarshall(i));
+
+                const payload = JSON.stringify({
+                    type: "userJoined",
+                    data: {
+                        userId,
+                        name: parsed.name,
+                        role: parsed.role,
+                        roomId,
+                    },
+                });
+
+                for (const conn of connections) {
+                    if (!conn.ConnectionId || conn.RoomId !== roomId) continue;
+                    try {
+                        await api.send(
+                            new PostToConnectionCommand({
+                                ConnectionId: conn.ConnectionId,
+                                Data: payload,
+                            })
+                        );
+                    } catch (err) {
+                        console.error(`⚠️ Failed to send to ${conn.ConnectionId}:`, err);
+                    }
+                }
+                console.log(`📢 Broadcasted userJoined for room ${roomId}`);
+            }
+        } catch (broadcastErr) {
+            console.error("⚠️ Broadcast failed:", broadcastErr);
+        }
 
         return NextResponse.json(
             {

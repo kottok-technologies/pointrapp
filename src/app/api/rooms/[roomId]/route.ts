@@ -20,8 +20,6 @@ export async function GET(
             );
         }
 
-        console.log(roomItem);
-
         // Normalize room to match our Room interface
         const room: Room = {
             id: String(roomItem.roomId ?? roomId),

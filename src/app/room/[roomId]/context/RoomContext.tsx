@@ -7,13 +7,10 @@ import React, {
     useEffect,
     useMemo,
     ReactNode,
+    useRef,
 } from "react";
 import { useRoomData } from "../hooks/useRoomData";
-import {User, Story, Room, Vote} from "@/lib/types";
-
-// -----------------------------------------------------------
-// Context Interfaces
-// -----------------------------------------------------------
+import { User, Story, Room, Vote } from "@/lib/types";
 
 interface RoomContextValue {
     room: Room | null;
@@ -38,33 +35,23 @@ interface RoomActions {
     submitVote: (storyId: string, value: string) => Promise<void>;
 }
 
-// -----------------------------------------------------------
-// Context Setup
-// -----------------------------------------------------------
-
 const RoomContext = createContext<RoomContextValue | undefined>(undefined);
+const STORAGE_KEY = (roomId: string) => `pointrapp:user:${roomId}`;
 
 interface RoomProviderProps {
     roomId: string;
     children: ReactNode;
 }
 
-const STORAGE_KEY = (roomId: string) => `pointrapp:user:${roomId}`;
-
-// -----------------------------------------------------------
-// Provider Component
-// -----------------------------------------------------------
-
 export function RoomProvider({ roomId, children }: RoomProviderProps) {
     const { votes, room, users, stories, loading, error, refresh } = useRoomData(roomId);
     const [activeStory, setActiveStory] = useState<Story | null>(null);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const wsRef = useRef<WebSocket | null>(null);
 
-    // 🧠 Load persisted user session (if exists)
+    // 🧠 Load persisted user session
     useEffect(() => {
-        // avoid synchronous state calls before React commits
         let isMounted = true;
-
         const loadUser = () => {
             try {
                 const saved = localStorage.getItem(STORAGE_KEY(roomId));
@@ -76,16 +63,11 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                 console.error("❌ Failed to load user session:", err);
             }
         };
-
-        // Run async-ish to avoid cascading synchronous updates
-        // This lets React paint first, then update state
         requestAnimationFrame(loadUser);
-
         return () => {
             isMounted = false;
         };
     }, [roomId]);
-
 
     // 💾 Persist user whenever it changes
     useEffect(() => {
@@ -100,25 +82,17 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
     useEffect(() => {
         if (stories.length === 0) return;
 
-        // If we already have an active story, check if it’s done.
         if (activeStory) {
             if (activeStory.status === "done") {
-                // Find the next pending story after the current one
                 const currentIndex = stories.findIndex((s) => s.id === activeStory.id);
-                const nextPending = stories
-                    .slice(currentIndex + 1)
-                    .find((s) => s.status !== "done");
-
+                const nextPending = stories.slice(currentIndex + 1).find((s) => s.status !== "done");
                 if (nextPending) {
                     requestAnimationFrame(() => setActiveStory(nextPending));
                 }
             }
-
-            // Don’t run the initial selection logic below if we already have one
             return;
         }
 
-        // Otherwise, pick the first estimating or pending story
         const firstEstimatingOrPending =
             stories.find((s) => s.status === "estimating") ??
             stories.find((s) => s.status === "pending") ??
@@ -129,8 +103,66 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
         }
     }, [stories, activeStory, setActiveStory]);
 
+    // 🌐 WebSocket: Connect and listen for broadcast events
+    useEffect(() => {
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+        if (!wsUrl) {
+            console.warn("⚠️ NEXT_PUBLIC_WS_URL not defined, skipping WebSocket connection");
+            return;
+        }
+
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+            console.log("🔌 Connected to WebSocket gateway");
+            // Optionally register the room
+            ws.send(JSON.stringify({ action: "register", roomId }));
+        };
+
+        ws.onmessage = async (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                console.log("📨 WebSocket message:", msg);
+
+                switch (msg.type) {
+                    case "userJoined":
+                        console.log(`👤 ${msg.data.name} joined the room`);
+                        await refresh();
+                        break;
+                    case "storyAdded":
+                    case "votesRevealed":
+                    case "revoteStarted":
+                        console.log(`🔄 ${msg.type} event detected`);
+                        await refresh();
+                        break;
+                    default:
+                        console.log("📬 Unhandled message type:", msg.type);
+                        break;
+                }
+            } catch (err) {
+                console.error("⚠️ Error parsing WS message:", err);
+            }
+        };
+
+        ws.onerror = (err) => {
+            console.error("❌ WebSocket error:", err);
+        };
+
+        ws.onclose = (e) => {
+            console.log(`⚠️ WebSocket closed (${e.code}). Reconnecting in 5s...`);
+            setTimeout(() => {
+                if (wsRef.current === ws) wsRef.current = null;
+            }, 5000);
+        };
+
+        return () => {
+            ws.close();
+        };
+    }, [roomId, refresh]);
+
     // -----------------------------------------------------------
-    // Actions (CRUD-style, tied to API routes)
+    // Actions
     // -----------------------------------------------------------
 
     const actions: RoomActions = useMemo(
@@ -184,6 +216,21 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                 setCurrentUser(newUser);
                 localStorage.setItem(STORAGE_KEY(roomId), JSON.stringify(newUser));
                 await refresh();
+
+                // 🆕 Immediately announce to WebSocket if connected
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                    wsRef.current.send(
+                        JSON.stringify({
+                            action: "join",
+                            roomId,
+                            userId: newUser.id,
+                            name: newUser.name,
+                            role: newUser.role,
+                        })
+                    );
+                    console.log(`📡 Sent join event for ${newUser.name}`);
+                }
+
                 return newUser;
             },
 
@@ -207,33 +254,29 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
     );
 
     // -----------------------------------------------------------
-    // Provide context value
+    // Provide Context
     // -----------------------------------------------------------
 
-    const value = useMemo<RoomContextValue>(() => ({
-        room,
-        users,
-        stories,
-        activeStory,
-        currentUser,
-        loading,
-        error,
-        votes,
-        setActiveStory,
-        setCurrentUser,
-        refresh,
-        actions,
-    }), [
-        room, users, stories, activeStory, currentUser,
-        loading, error, votes, refresh, actions
-    ]);
+    const value = useMemo<RoomContextValue>(
+        () => ({
+            room,
+            users,
+            stories,
+            activeStory,
+            currentUser,
+            loading,
+            error,
+            votes,
+            setActiveStory,
+            setCurrentUser,
+            refresh,
+            actions,
+        }),
+        [room, users, stories, activeStory, currentUser, loading, error, votes, refresh, actions]
+    );
 
     return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;
 }
-
-// -----------------------------------------------------------
-// Hook to use the RoomContext
-// -----------------------------------------------------------
 
 export function useRoom() {
     const context = useContext(RoomContext);

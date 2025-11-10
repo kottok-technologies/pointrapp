@@ -1,23 +1,39 @@
 const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
+const { marshall } = require("@aws-sdk/util-dynamodb");
 
 const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 exports.handler = async (event) => {
-    console.log("onConnect event:", event);
+    console.log("onConnect event:", JSON.stringify(event, null, 2));
 
-    const connectionId = event.requestContext.connectionId;
-    const roomId = event.queryStringParameters?.roomId ?? "lobby";
+    try {
+        const connectionId = event.requestContext.connectionId;
 
-    await dynamo.send(
-        new PutItemCommand({
-            TableName: process.env.CONNECTIONS_TABLE,
-            Item: {
-                ConnectionId: { S: connectionId },
-                RoomId: { S: roomId },
-                ConnectedAt: { S: new Date().toISOString() },
-            },
-        })
-    );
+        // Optional: store connection
+        await dynamo.send(
+            new PutItemCommand({
+                TableName: process.env.CONNECTIONS_TABLE,
+                Item: marshall({
+                    ConnectionId: connectionId,
+                    DomainName: event.requestContext.domainName,
+                    Stage: event.requestContext.stage,
+                    ConnectedAt: new Date().toISOString(),
+                }),
+            })
+        );
 
-    return { statusCode: 200, body: "Connected." };
+        // ✅ Must return 200
+        return {
+            statusCode: 200,
+            body: "Connected successfully.",
+        };
+    } catch (err) {
+        console.error("❌ Connect error:", err);
+
+        // ❗ Even on error, return 200 or it becomes "Forbidden"
+        return {
+            statusCode: 200,
+            body: `Connected (with warning): ${err.message}`,
+        };
+    }
 };
