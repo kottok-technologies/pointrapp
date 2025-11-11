@@ -54,51 +54,6 @@ export async function POST(
             await updateRoomId(parsed.connectionId, roomId);
         }
 
-        // ✅ Broadcast new user joined
-        try {
-            const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-            if (!wsUrl) {
-                console.warn("⚠️ Skipping broadcast: NEXT_PUBLIC_WS_URL not configured");
-            } else {
-
-                const api = new ApiGatewayManagementApiClient({
-                    region: process.env.AWS_REGION,
-                    endpoint: wsUrl.replace(/^wss/, "https"), // convert wss:// → https://
-                });
-
-                // Query active connections for this room (same logic as broadcast lambda)
-                const connections = await queryByRoomId<{ ConnectionId: string; RoomId: string }>(roomId);
-
-                const payload = JSON.stringify({
-                    action: "broadcast",
-                    type: "userJoined",
-                    data: {
-                        userId,
-                        name: parsed.name,
-                        role: parsed.role,
-                        roomId,
-                    },
-                });
-
-                for (const conn of connections) {
-                    if (!conn.ConnectionId || conn.RoomId !== roomId) continue;
-                    try {
-                        await api.send(
-                            new PostToConnectionCommand({
-                                ConnectionId: conn.ConnectionId,
-                                Data: payload,
-                            })
-                        );
-                    } catch (err) {
-                        console.error(`⚠️ Failed to send to ${conn.ConnectionId}:`, err);
-                    }
-                }
-                console.log(`📢 Broadcasted userJoined for room ${roomId}`);
-            }
-        } catch (broadcastErr) {
-            console.error("⚠️ Broadcast failed:", broadcastErr);
-        }
-
         return NextResponse.json(
             {
                 userId,

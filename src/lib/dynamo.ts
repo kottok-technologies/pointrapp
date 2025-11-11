@@ -230,11 +230,9 @@ export async function queryByRoomId<T>(roomId: string, indexName = "RoomIdIndex"
 export async function updateRoomId(connectionId: string, roomId: string): Promise<void> {
     const params = {
         TableName: ConnectionTableName,
-        Key: marshall({ ConnectionId: connectionId }),
+        Key: { ConnectionId: { S: connectionId } }, // explicit raw key
         UpdateExpression: "SET RoomId = :r",
-        ExpressionAttributeValues: {
-            ":r": { S: roomId },
-        },
+        ExpressionAttributeValues: marshall({ ":r": roomId }),
     };
 
     await dynamo.send(new UpdateItemCommand(params));

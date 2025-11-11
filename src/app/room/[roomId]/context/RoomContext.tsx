@@ -110,58 +110,84 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
             console.warn("⚠️ NEXT_PUBLIC_WS_URL not defined, skipping WebSocket connection");
             return;
         }
-        const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
 
-        ws.onopen = () => {
-            console.log("🔌 Connected to WebSocket gateway");
-            ws.send(JSON.stringify({ action: "register" }));
-        };
+        let reconnectAttempt = 0;
+        let shouldReconnect = true;
+        let reconnectTimer: NodeJS.Timeout | null = null;
 
-        ws.onmessage = async (event) => {
-            try {
-                const msg = JSON.parse(event.data);
-                console.log("📨 WebSocket message:", msg);
+        const connect = () => {
+            console.log(`🔌 Attempting WebSocket connection (attempt ${reconnectAttempt + 1}) to:`, wsUrl);
 
-                switch (msg.type) {
-                    case "connectionAck":
-                        console.log("✅ Received connectionId:", msg.connectionId);
-                        localStorage.setItem("pointrapp:connectionId", msg.connectionId);
-                        break;
-                    case "userJoined":
-                        console.log(`👤 ${msg.data.name} joined the room`);
-                        await refresh();
-                        break;
-                    case "storyAdded":
-                    case "votesRevealed":
-                    case "revoteStarted":
-                        console.log(`🔄 ${msg.type} event detected`);
-                        await refresh();
-                        break;
-                    default:
-                        console.log("📬 Unhandled message type:", msg.type);
-                        break;
+            const ws = new WebSocket(wsUrl);
+            wsRef.current = ws;
+
+            ws.onopen = () => {
+                reconnectAttempt = 0; // ✅ reset backoff
+                console.log("✅ Connected to WebSocket gateway");
+                ws.send(JSON.stringify({ action: "register" }));
+            };
+
+            ws.onmessage = async (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    console.log("📨 WebSocket message:", msg);
+
+                    switch (msg.type) {
+                        case "connectionAck":
+                            console.log("✅ Received connectionId:", msg.connectionId);
+                            localStorage.setItem("pointrapp:connectionId", msg.connectionId);
+                            break;
+                        case "userJoined":
+                            console.log(`👤 ${msg.data.name} joined the room`);
+                            await refresh();
+                            break;
+                        case "storyAdded":
+                        case "votesRevealed":
+                        case "revoteStarted":
+                            console.log(`🔄 ${msg.type} event detected`);
+                            await refresh();
+                            break;
+                        default:
+                            console.log("📬 Unhandled message type:", msg.type);
+                            break;
+                    }
+                } catch (err) {
+                    console.error("⚠️ Error parsing WS message:", err);
                 }
-            } catch (err) {
-                console.error("⚠️ Error parsing WS message:", err);
-            }
+            };
+
+            ws.onerror = (err) => {
+                console.error("❌ WebSocket error:", err);
+                ws.close(); // force onclose to trigger reconnect logic
+            };
+
+            ws.onclose = (e) => {
+                if (!shouldReconnect) {
+                    console.log("🧹 WebSocket closed cleanly — no reconnect (unmounted).");
+                    return;
+                }
+
+                const backoff = Math.min(1000 * 2 ** reconnectAttempt, 30000); // exponential up to 30s
+                console.warn(`⚠️ WebSocket closed (${e.code}). Reconnecting in ${backoff / 1000}s...`);
+
+                reconnectAttempt += 1;
+                reconnectTimer = setTimeout(connect, backoff);
+            };
         };
 
-        ws.onerror = (err) => {
-            console.error("❌ WebSocket error:", err);
-        };
-
-        ws.onclose = (e) => {
-            console.log(`⚠️ WebSocket closed (${e.code}). Reconnecting in 5s...`);
-            setTimeout(() => {
-                if (wsRef.current === ws) wsRef.current = null;
-            }, 5000);
-        };
+        connect(); // 🚀 initial connection
 
         return () => {
-            ws.close();
+            console.log("🧹 Cleaning up WebSocket...");
+            shouldReconnect = false;
+            if (reconnectTimer) clearTimeout(reconnectTimer);
+            if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+            }
         };
     }, [roomId]);
+
 
     // -----------------------------------------------------------
     // Actions
@@ -176,6 +202,18 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ title, description }),
                 });
+
+                // 🆕 Immediately announce to WebSocket if connected
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                    wsRef.current.send(
+                        JSON.stringify({
+                            action: "broadcast",
+                            type: "storyAdded",
+                            roomId: roomId,
+                        })
+                    );
+                }
+
                 await refresh();
             },
 
@@ -185,6 +223,18 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ storyId }),
                 });
+
+                // 🆕 Immediately announce to WebSocket if connected
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                    wsRef.current.send(
+                        JSON.stringify({
+                            action: "broadcast",
+                            type: "votesRevealed",
+                            roomId: roomId,
+                        })
+                    );
+                }
+
                 await refresh();
             },
 
@@ -194,6 +244,18 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ storyId }),
                 });
+
+                // 🆕 Immediately announce to WebSocket if connected
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                    wsRef.current.send(
+                        JSON.stringify({
+                            action: "broadcast",
+                            type: "revoteStarted",
+                            roomId: roomId,
+                        })
+                    );
+                }
+
                 await refresh();
             },
 
@@ -226,11 +288,13 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                     wsRef.current.send(
                         JSON.stringify({
                             action: "broadcast",
-                            type: "join",
+                            type: "userJoined",
                             roomId: roomId,
-                            userId: newUser.id,
-                            name: newUser.name,
-                            role: newUser.role,
+                            data: {
+                                userId: newUser.id,
+                                name: newUser.name,
+                                role: newUser.role,
+                            }
                         })
                     );
                     console.log(`📡 Sent join event for ${newUser.name}`);
