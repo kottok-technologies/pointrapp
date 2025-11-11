@@ -48,7 +48,9 @@ export async function POST(
 
         await putItem(userItem);
 
-        if(parsed.connectionId !== undefined) {
+        console.log("connectionId:", parsed.connectionId);
+
+        if(parsed.connectionId) {
             await updateRoomId(parsed.connectionId, roomId);
         }
 

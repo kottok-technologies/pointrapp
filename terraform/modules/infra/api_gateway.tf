@@ -30,6 +30,13 @@ resource "aws_apigatewayv2_integration" "broadcast" {
   integration_method = "POST"
 }
 
+resource "aws_apigatewayv2_integration" "register" {
+  api_id             = aws_apigatewayv2_api.ws_api.id
+  integration_type   = "AWS_PROXY"
+  integration_uri    = aws_lambda_function.register.invoke_arn
+  integration_method = "POST"
+}
+
 # --- Routes ---
 resource "aws_apigatewayv2_route" "connect_route" {
   api_id    = aws_apigatewayv2_api.ws_api.id
@@ -47,6 +54,12 @@ resource "aws_apigatewayv2_route" "broadcast_route" {
   api_id    = aws_apigatewayv2_api.ws_api.id
   route_key = "broadcast"
   target    = "integrations/${aws_apigatewayv2_integration.broadcast.id}"
+}
+
+resource "aws_apigatewayv2_route" "register_route" {
+  api_id    = aws_apigatewayv2_api.ws_api.id
+  route_key = "register"
+  target    = "integrations/${aws_apigatewayv2_integration.register.id}"
 }
 
 # --- Lambda Permissions ---
@@ -75,6 +88,15 @@ resource "aws_lambda_permission" "broadcast_permission" {
   function_name = aws_lambda_function.broadcast.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/broadcast"
+}
+
+# Allow register route
+resource "aws_lambda_permission" "broadcast_permission" {
+  statement_id  = "AllowRegister"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.register.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/register"
 }
 
 ########################################

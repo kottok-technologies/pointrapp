@@ -43,3 +43,17 @@ resource "aws_lambda_function" "broadcast" {
     }
   }
 }
+
+resource "aws_lambda_function" "register" {
+  function_name = "${var.project_name}-register-${var.environment}"
+  filename      = "${path.module}/lambdas/dist/onRegister.zip"
+  source_code_hash = filebase64sha256("${path.module}/lambdas/dist/onRegister.zip")
+  handler       = "onRegister.handler"
+  runtime       = var.lambda_runtime
+  role          = aws_iam_role.lambda_role.arn
+  environment {
+    variables = {
+      CONNECTIONS_TABLE = aws_dynamodb_table.ws_connections.name
+    }
+  }
+}

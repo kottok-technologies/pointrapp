@@ -115,8 +115,7 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
 
         ws.onopen = () => {
             console.log("🔌 Connected to WebSocket gateway");
-            // Optionally register the room
-            //ws.send(JSON.stringify({ action: "broadcast", type: "register", roomId: roomId }));
+            ws.send(JSON.stringify({ action: "register" }));
         };
 
         ws.onmessage = async (event) => {
@@ -125,7 +124,7 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                 console.log("📨 WebSocket message:", msg);
 
                 switch (msg.type) {
-                    case "connection_ack":
+                    case "connectionAck":
                         console.log("✅ Received connectionId:", msg.connectionId);
                         localStorage.setItem("pointrapp:connectionId", msg.connectionId);
                         break;
