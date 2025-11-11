@@ -18,7 +18,7 @@ pushd "$LAMBDA_DIR" > /dev/null
 echo "🧩 Installing dependencies..."
 npm install --no-audit --no-fund --silent @aws-sdk/client-dynamodb @aws-sdk/client-apigatewaymanagementapi
 
-for fn in onConnect onDisconnect broadcast; do
+for fn in onConnect onDisconnect broadcast onRegister; do
   echo "🗜️  Zipping $fn.js ..."
   zip -q -r "$DIST_DIR/$fn.zip" "$fn.js" node_modules package.json package-lock.json
 done
