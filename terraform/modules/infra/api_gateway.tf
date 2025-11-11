@@ -91,7 +91,7 @@ resource "aws_lambda_permission" "broadcast_permission" {
 }
 
 # Allow register route
-resource "aws_lambda_permission" "broadcast_permission" {
+resource "aws_lambda_permission" "register_permission" {
   statement_id  = "AllowRegister"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.register.function_name
