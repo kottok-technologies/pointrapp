@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRoom } from "../context/RoomContext";
+import {useUser} from "@/context/UserContext";
 
 export function JoinRoomModal() {
-    const { currentUser, actions } = useRoom();
+    const { actions } = useRoom();
+    const { user } = useUser();
 
     // ✅ Initialize name safely (no SSR access)
     const [name, setName] = useState("");
@@ -30,7 +32,7 @@ export function JoinRoomModal() {
     }, [name]);
 
     // If user already joined, hide modal
-    if (currentUser) return null;
+    if (user) return null;
 
     async function handleJoin() {
         if (!name.trim()) {
@@ -42,7 +44,7 @@ export function JoinRoomModal() {
         setError(null);
 
         try {
-            await actions.joinRoom(name.trim(), role);
+            await actions.joinRoom();
         } catch (err) {
             if (err instanceof Error) setError(err.message);
             else setError("Failed to join room");

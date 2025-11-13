@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { queryByPK, getItem } from "@/lib/dynamo";
+import {queryByPK, getItem} from "@/lib/dynamo";
 import type {Room, User, Story, Vote} from "@/lib/types";
 
 // ✅ GET /api/rooms/[roomId]

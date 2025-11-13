@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import {User} from "@/lib/types";
 
 export default function HomePage() {
     const router = useRouter();
@@ -32,6 +33,26 @@ export default function HomePage() {
     function joinExisting() {
         if (roomId.trim()) router.push(`/room/${roomId.trim()}`);
     }
+
+    // Load user from local storage if it exists
+    useEffect(() => {
+        let isMounted = true;
+        const loadUser = () => {
+            try {
+                const saved = localStorage.getItem("pointrapp:user");
+                if (saved && isMounted) {
+                    const parsed: User = JSON.parse(saved);
+                    setName(parsed.name);
+                }
+            } catch (err) {
+                console.error("❌ Failed to load user session:", err);
+            }
+        };
+        requestAnimationFrame(loadUser);
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     // Persist display name locally
     useEffect(() => {

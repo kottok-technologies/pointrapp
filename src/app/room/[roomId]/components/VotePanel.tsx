@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRoom } from "../context/RoomContext";
+import { useUser } from "@/context/UserContext"
 
 const DEFAULT_DECK = ["0", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?"];
 
 export function VotePanel() {
-    const { room, activeStory, currentUser, votes, refresh } = useRoom();
+    const { room, activeStory, votes, refresh } = useRoom();
+    const { user } = useUser();
     const [selected, setSelected] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
@@ -16,9 +18,9 @@ export function VotePanel() {
 
     // ✅ Initialize selection: localStorage → backend → null
     useEffect(() => {
-        if (!room?.id || !activeStory?.id || !currentUser?.id) return;
+        if (!room?.id || !activeStory?.id || !user?.id) return;
 
-        const key = STORAGE_KEY(room.id, activeStory.id, currentUser.id);
+        const key = STORAGE_KEY(room.id, activeStory.id, user.id);
         const local = localStorage.getItem(key);
 
         if (activeStory.status === "estimating") {
@@ -33,24 +35,24 @@ export function VotePanel() {
         } else {
             const backendVote =
                 votes.find(
-                    (v) => v.userId === currentUser.id && v.storyId === activeStory.id
+                    (v) => v.userId === user.id && v.storyId === activeStory.id
                 )?.value ?? null;
             setSelected(backendVote);
         }
-    }, [room?.id, activeStory?.id, activeStory?.status, currentUser?.id, votes]);
+    }, [room?.id, activeStory?.id, activeStory?.status, user?.id, votes]);
 
     // ✅ Persist selection locally whenever it changes
     useEffect(() => {
-        if (room?.id && activeStory?.id && currentUser?.id && selected) {
+        if (room?.id && activeStory?.id && user?.id && selected) {
             localStorage.setItem(
-                STORAGE_KEY(room.id, activeStory.id, currentUser.id),
+                STORAGE_KEY(room.id, activeStory.id, user.id),
                 selected
             );
         }
-    }, [selected, room?.id, activeStory?.id, currentUser?.id]);
+    }, [selected, room?.id, activeStory?.id, user?.id]);
 
     async function handleVote(value: string) {
-        if (!activeStory || !currentUser) {
+        if (!activeStory || !user) {
             setMessage("Select a story and join the room first!");
             return;
         }
@@ -64,7 +66,7 @@ export function VotePanel() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    userId: currentUser.id,
+                    userId: user.id,
                     storyId: activeStory.id,
                     value,
                 }),
@@ -75,7 +77,7 @@ export function VotePanel() {
 
             setMessage("Vote recorded!");
             localStorage.setItem(
-                STORAGE_KEY(room?.id || "", activeStory.id, currentUser.id),
+                STORAGE_KEY(room?.id || "", activeStory.id, user.id),
                 value
             );
 

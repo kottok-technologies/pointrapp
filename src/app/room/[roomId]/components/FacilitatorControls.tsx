@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRoom } from "../context/RoomContext";
+import {useUser} from "@/context/UserContext";
 
 export function FacilitatorControls() {
-    const { currentUser, activeStory, actions, refresh } = useRoom();
+    const { activeStory, actions, refresh } = useRoom();
+    const { user } = useUser();
     const [loading, setLoading] = useState(false);
-    const isFacilitator = currentUser?.role === "facilitator";
+    const isFacilitator = user?.role === "facilitator";
 
     if (!isFacilitator || !activeStory) return null;
 

@@ -58,3 +58,15 @@ export interface Deck {
     values: string[];
     createdBy?: string;
 }
+
+export interface WebSocketMessage {
+    type:
+        | "connectionAck"
+        | "userJoined"
+        | "storyAdded"
+        | "votesRevealed"
+        | "revoteStarted"
+        | string; // fallback for unknown events
+    connectionId?: string;
+    data?: unknown;
+}

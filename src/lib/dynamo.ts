@@ -14,13 +14,15 @@ import { fromSSO } from "@aws-sdk/credential-provider-sso";
 type AttrMap = Record<string, AttributeValue>;
 
 // ============================================================
-// DynamoDB Client Setup
+// ⚙️ DynamoDB Client Setup
 // ============================================================
 
 const isLocalhost =
-    process.env.HOSTNAME === "localhost" || process.env.HOST === "localhost" || process.env.NODE_ENV === "development";
+    process.env.HOSTNAME === "localhost" ||
+    process.env.HOST === "localhost" ||
+    process.env.NODE_ENV === "development";
 
-// Dynamically configure the client based on the environment
+// Dynamically configure the client
 const getDynamoClient = () => {
     if (isLocalhost) {
         return new DynamoDBClient({
@@ -32,150 +34,141 @@ const getDynamoClient = () => {
     }
     return new DynamoDBClient({
         region: process.env.AWS_REGION,
-        // default credentials chain
     });
 };
 
 const dynamo = getDynamoClient();
 
+// ============================================================
+// 🧩 Table Names (required env vars)
+// ============================================================
+
 const TableName = process.env.DYNAMODB_TABLE_NAME!;
 if (!TableName)
-    throw new Error("❌ Missing DYNAMODB_TABLE_NAME env variable");
+    throw new Error("❌ Missing DYNAMODB_TABLE_NAME environment variable");
 
 const ConnectionTableName = process.env.CONNECTIONS_TABLE!;
 if (!ConnectionTableName)
-    throw new Error("❌ Missing CONNECTIONS_TABLE env variable");
-/**
- * Converts PascalCase or snake_case keys to camelCase recursively.
- */
+    throw new Error("❌ Missing CONNECTIONS_TABLE environment variable");
+
+// ============================================================
+// 🧠 Case Conversion Utilities
+// ============================================================
+
+/** Converts DynamoDB-style keys (PascalCase / snake_case) → camelCase recursively */
 function toCamelCaseKeys<T>(obj: unknown): T {
     if (Array.isArray(obj)) {
-        // Recursively process each array element
-        return obj.map((item) => toCamelCaseKeys(item)) as unknown as T;
+        return obj.map((i) => toCamelCaseKeys(i)) as unknown as T;
     }
-
     if (obj && typeof obj === "object") {
         const result: Record<string, unknown> = {};
-
         for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
             const camelKey = key
                 .charAt(0)
                 .toLowerCase()
                 .concat(key.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase()));
-
             result[camelKey] = toCamelCaseKeys(value);
         }
-
         return result as T;
     }
-
     return obj as T;
 }
 
-/**
- * Converts camelCase keys to PascalCase recursively.
- */
+/** Converts camelCase → PascalCase recursively (for writing to DynamoDB) */
 function toPascalCaseKeys<T>(obj: unknown): T {
     if (Array.isArray(obj)) {
-        return obj.map((item) => toPascalCaseKeys(item)) as unknown as T;
+        return obj.map((i) => toPascalCaseKeys(i)) as unknown as T;
     }
-
     if (obj && typeof obj === "object") {
         const result: Record<string, unknown> = {};
-
         for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
             const pascalKey = key.charAt(0).toUpperCase() + key.slice(1);
             result[pascalKey] = toPascalCaseKeys(value);
         }
-
         return result as T;
     }
-
     return obj as T;
 }
 
 // ============================================================
-// Utility Helpers
+// 🧩 Safe Marshalling / Unmarshalling
 // ============================================================
 
-/** Helper for marshalling values safely (returns AttrMap). */
 function safeMarshall<T extends object>(obj: T): AttrMap {
-    const pascalized = toPascalCaseKeys(obj); // ✅ convert to PascalCase before saving
+    const pascalized = toPascalCaseKeys(obj);
     return marshall(pascalized, { removeUndefinedValues: true }) as AttrMap;
 }
 
-/** Helper for unmarshalling values safely (accepts AttrMap). */
 function safeUnmarshall<T>(item: AttrMap): T {
     const raw = unmarshall(item);
-    return toCamelCaseKeys<T>(raw); // ✅ convert Dynamo keys to camelCase
+    return toCamelCaseKeys<T>(raw);
 }
 
 // ============================================================
-// CRUD Utilities
+// 🧱 Core CRUD Utilities
 // ============================================================
 
-/** Inserts or replaces an item in DynamoDB. */
+/** ✅ Put (create or replace) an item */
 export async function putItem<T extends object>(item: T): Promise<void> {
-    const params = {
-        TableName,
-        Item: safeMarshall(item),
-    };
-    await dynamo.send(new PutItemCommand(params));
+    await dynamo.send(
+        new PutItemCommand({
+            TableName,
+            Item: safeMarshall(item),
+        })
+    );
 }
 
-/** Retrieves a single item by PK + SK. */
-export async function getItem<T>(
-    pk: string,
-    sk: string
-): Promise<T | null> {
-    const params = {
-        TableName,
-        Key: safeMarshall({ PK: pk, SK: sk }),
-    };
-
-    const { Item } = await dynamo.send(new GetItemCommand(params));
+/** ✅ Get item by PK + SK */
+export async function getItem<T>(pk: string, sk: string): Promise<T | null> {
+    const { Item } = await dynamo.send(
+        new GetItemCommand({
+            TableName,
+            Key: safeMarshall({ PK: pk, SK: sk }),
+        })
+    );
     return Item ? safeUnmarshall<T>(Item as AttrMap) : null;
 }
 
-/** Deletes an item by PK + SK. */
+/** ✅ Delete by PK + SK */
 export async function deleteItem(pk: string, sk: string): Promise<void> {
-    const params = {
-        TableName,
-        Key: safeMarshall({ PK: pk, SK: sk }),
-    };
-    await dynamo.send(new DeleteItemCommand(params));
+    await dynamo.send(
+        new DeleteItemCommand({
+            TableName,
+            Key: safeMarshall({ PK: pk, SK: sk }),
+        })
+    );
 }
 
-/** Queries all items in a partition (e.g., all users/stories in a room). */
+/** ✅ Query all items for a given PK (e.g., all USERS for a ROOM) */
 export async function queryByPK<T>(pk: string): Promise<T[]> {
-    const params = {
-        TableName,
-        KeyConditionExpression: "PK = :pk",
-        ExpressionAttributeValues: safeMarshall({ ":pk": pk }),
-    };
-
-    const { Items } = await dynamo.send(new QueryCommand(params));
+    const { Items } = await dynamo.send(
+        new QueryCommand({
+            TableName,
+            KeyConditionExpression: "PK = :pk",
+            ExpressionAttributeValues: marshall({ ":pk": pk }),
+        })
+    );
     return (Items || []).map((i) => safeUnmarshall<T>(i as AttrMap));
 }
 
-/** Queries by a Global Secondary Index (GSI). */
+/** ✅ Query by Global Secondary Index */
 export async function queryByGSI<T>(
     indexName: string,
     keyName: string,
     keyValue: string
 ): Promise<T[]> {
-    const params = {
-        TableName,
-        IndexName: indexName,
-        KeyConditionExpression: `${keyName} = :v`,
-        ExpressionAttributeValues: safeMarshall({ ":v": keyValue }),
-    };
-
-    const { Items } = await dynamo.send(new QueryCommand(params));
+    const { Items } = await dynamo.send(
+        new QueryCommand({
+            TableName,
+            IndexName: indexName,
+            KeyConditionExpression: `${keyName} = :v`,
+            ExpressionAttributeValues: marshall({ ":v": keyValue }),
+        })
+    );
     return (Items || []).map((i) => safeUnmarshall<T>(i as AttrMap));
 }
 
-/** Performs a partial update on an item (e.g., updating story status). */
+/** ✅ Partial update (safe) */
 export async function updateItem<T>(
     pk: string,
     sk: string,
@@ -193,47 +186,54 @@ export async function updateItem<T>(
         exprValues[valKey] = value;
     }
 
-    const params = {
-        TableName,
-        Key: safeMarshall({ PK: pk, SK: sk }),
-        UpdateExpression: `SET ${setExpressions.join(", ")}`,
-        ExpressionAttributeNames: exprNames,
-        ExpressionAttributeValues: safeMarshall(exprValues),
-    };
-
-    await dynamo.send(new UpdateItemCommand(params));
+    await dynamo.send(
+        new UpdateItemCommand({
+            TableName,
+            Key: safeMarshall({ PK: pk, SK: sk }),
+            UpdateExpression: `SET ${setExpressions.join(", ")}`,
+            ExpressionAttributeNames: exprNames,
+            ExpressionAttributeValues: marshall(exprValues),
+        })
+    );
 }
 
-/** Scans all items in the table. ⚠️ For testing/admin only. */
+/** ⚠️ Scan everything (use only for admin or dev) */
 export async function scanAll<T>(): Promise<T[]> {
-    const params = { TableName };
-    const { Items } = await dynamo.send(new ScanCommand(params));
+    const { Items } = await dynamo.send(new ScanCommand({ TableName }));
     return (Items || []).map((i) => safeUnmarshall<T>(i as AttrMap));
 }
 
-/** Query table by RoomId **/
-export async function queryByRoomId<T>(roomId: string, indexName = "RoomIdIndex"): Promise<T[]> {
-    const params = {
-        TableName: ConnectionTableName,
-        IndexName: indexName,
-        KeyConditionExpression: "RoomId = :r",
-        ExpressionAttributeValues: {
-            ":r": { S: roomId },
-        },
-    };
+// ============================================================
+// 🌐 Connection Table Helpers
+// ============================================================
 
-    const { Items } = await dynamo.send(new QueryCommand(params));
+/** ✅ Query active connections by RoomId */
+export async function queryByRoomId<T>(
+    roomId: string,
+    indexName = "RoomIdIndex"
+): Promise<T[]> {
+    const { Items } = await dynamo.send(
+        new QueryCommand({
+            TableName: ConnectionTableName,
+            IndexName: indexName,
+            KeyConditionExpression: "RoomId = :r",
+            ExpressionAttributeValues: { ":r": { S: roomId } },
+        })
+    );
     return (Items || []).map((i) => safeUnmarshall<T>(i as AttrMap));
 }
 
-/** Update connection with RoomId **/
-export async function updateRoomId(connectionId: string, roomId: string): Promise<void> {
-    const params = {
-        TableName: ConnectionTableName,
-        Key: { ConnectionId: { S: connectionId } }, // explicit raw key
-        UpdateExpression: "SET RoomId = :r",
-        ExpressionAttributeValues: marshall({ ":r": roomId }),
-    };
-
-    await dynamo.send(new UpdateItemCommand(params));
+/** ✅ Update a connection’s associated RoomId (non-destructive) */
+export async function updateRoomId(
+    connectionId: string,
+    roomId: string
+): Promise<void> {
+    await dynamo.send(
+        new UpdateItemCommand({
+            TableName: ConnectionTableName,
+            Key: { ConnectionId: { S: connectionId } },
+            UpdateExpression: "SET RoomId = :r",
+            ExpressionAttributeValues: marshall({ ":r": roomId }),
+        })
+    );
 }

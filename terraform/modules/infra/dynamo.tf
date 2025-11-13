@@ -11,33 +11,18 @@ resource "aws_dynamodb_table" "pointrapp" {
     enabled = true
   }
 
+  stream_enabled = true
+
+  stream_view_type = "NEW_AND_OLD_IMAGES"
+
+  server_side_encryption {
+    enabled = true
+  }
+
   hash_key  = "PK"
-  range_key = "SK"
 
   attribute {
     name = "PK"
-    type = "S"
-  }
-
-  attribute {
-    name = "SK"
-    type = "S"
-  }
-
-  # For GSI1: EntityType + CreatedAt
-  attribute {
-    name = "EntityType"
-    type = "S"
-  }
-
-  attribute {
-    name = "CreatedAt"
-    type = "S"
-  }
-
-  # For GSI2: UserId + RoomId
-  attribute {
-    name = "UserId"
     type = "S"
   }
 
@@ -46,32 +31,30 @@ resource "aws_dynamodb_table" "pointrapp" {
     type = "S"
   }
 
-  # For GSI3: StoryId + RoomId
   attribute {
-    name = "StoryId"
+    name = "EntityType"
     type = "S"
   }
 
-  # Global Secondary Indexes
+  ##########################################################
+  # GSI #1 – RoomIndex
+  # Query all items (users, stories, votes, etc.) in one room
+  ##########################################################
   global_secondary_index {
-    name            = "GSI1_EntityTypeCreatedAt"
-    hash_key        = "EntityType"
-    range_key       = "CreatedAt"
-    projection_type = "ALL"
+    name               = "RoomIndex"
+    hash_key           = "RoomId"
+    projection_type    = "ALL"
   }
 
+  ##########################################################
+  # GSI #2 – RoomEntityIndex
+  # Query all items of a specific type within one room
+  ##########################################################
   global_secondary_index {
-    name            = "GSI2_UserRoom"
-    hash_key        = "UserId"
-    range_key       = "RoomId"
-    projection_type = "ALL"
-  }
-
-  global_secondary_index {
-    name            = "GSI3_StoryRoom"
-    hash_key        = "StoryId"
-    range_key       = "RoomId"
-    projection_type = "ALL"
+    name               = "RoomEntityIndex"
+    hash_key           = "RoomId"
+    range_key          = "EntityType"
+    projection_type    = "ALL"
   }
 
   tags = {

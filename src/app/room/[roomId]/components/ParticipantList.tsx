@@ -4,18 +4,18 @@ import { useRoom } from "../context/RoomContext";
 import Image from "next/image";
 
 export function ParticipantList() {
-    const { users } = useRoom();
+    const { participants } = useRoom();
 
     return (
         <div>
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Participants</h2>
 
-            {users.length === 0 && (
+            {participants.length === 0 && (
                 <p className="text-sm text-gray-400">No participants yet.</p>
             )}
 
             <ul className="space-y-2">
-                {users.map((user) => (
+                {participants.map((user) => (
                     <li
                         key={user.id}
                         className={`flex items-center justify-between bg-white border rounded-lg px-3 py-2 shadow-sm transition ${
