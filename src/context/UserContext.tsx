@@ -2,11 +2,8 @@
 
 import React, { createContext, useContext, useMemo, ReactNode } from "react";
 import { useUserData } from "@/hooks/useUserData";
-import { User } from "@/lib/types";
 
-interface UserContextValue extends ReturnType<typeof useUserData> {}
-
-const UserContext = createContext<UserContextValue | undefined>(undefined);
+const UserContext = createContext<ReturnType<typeof useUserData> | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
     const userState = useUserData();

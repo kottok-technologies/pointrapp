@@ -1,4 +1,4 @@
-import { RoomProvider } from "./context/RoomContext";
+import { RoomProvider } from "@/context/RoomContext";
 
 export default async function RoomLayout({
                                        children,
