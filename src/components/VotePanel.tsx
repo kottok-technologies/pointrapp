@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRoom } from "../context/RoomContext";
+import { useRoom } from "@/context/RoomContext";
 import { useUser } from "@/context/UserContext"
 
 const DEFAULT_DECK = ["0", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?"];

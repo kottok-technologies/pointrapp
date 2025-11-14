@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRoom } from "../context/RoomContext";
-import {FacilitatorControls} from "./FacilitatorControls";
+import { useRoom } from "@/context/RoomContext";
+import { FacilitatorControls } from "@/components/FacilitatorControls";
 
 export function StoryList() {
     const { room, stories, activeStory, setActiveStory, refresh } = useRoom();

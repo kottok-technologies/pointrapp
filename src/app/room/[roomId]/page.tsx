@@ -1,10 +1,10 @@
 "use client";
 
-import { StoryList } from "./components/StoryList";
-import { VotePanel } from "./components/VotePanel";
-import { ParticipantList } from "./components/ParticipantList";
-import { JoinRoomModal } from "./components/JoinRoomModal";
-import { useRoom } from "./context/RoomContext";
+import { StoryList } from "@/components/StoryList";
+import { VotePanel } from "@/components/VotePanel";
+import { ParticipantList } from "@/components/ParticipantList";
+import { JoinRoomModal } from "@/components/JoinRoomModal";
+import { useRoom } from "@/context/RoomContext";
 
 export default function RoomPage() {
     const { room, error, refresh } = useRoom();

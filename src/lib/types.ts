@@ -6,7 +6,7 @@ export interface User {
     avatarUrl?: string;
     joinedAt: string; // ISO timestamp
     lastActiveAt?: string;
-    roomId?: string; // currently joined room
+    roomId?: string | null; // currently joined room
 }
 
 // Room (main session)

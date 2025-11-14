@@ -42,7 +42,7 @@ interface RoomProviderProps {
 }
 
 export function RoomProvider({ roomId, children }: RoomProviderProps) {
-    const { user, updateUserField } = useUser(); // 🧍 persistent global user
+    const { user, setRoomForUser } = useUser(); // 🧍 persistent global user
     const {
         connectionId,
         sendMessage,
@@ -210,7 +210,7 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || "Failed to join room");
 
-                await updateUserField("roomId", roomId);
+                await setRoomForUser(roomId);
                 await refresh();
 
                 sendMessage({
@@ -241,7 +241,7 @@ export function RoomProvider({ roomId, children }: RoomProviderProps) {
                 await refresh();
             },
         }),
-        [roomId, user, connectionId, refresh, updateUserField, sendMessage]
+        [roomId, user, connectionId, refresh, setRoomForUser, sendMessage]
     );
 
     // -----------------------------------------------------------
