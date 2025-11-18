@@ -4,6 +4,7 @@ import "@/styles/globals.css";
 import { Toaster } from "react-hot-toast";
 import {UserProvider} from "@/context/UserContext";
 import {ConnectionProvider} from "@/context/ConnectionContext";
+import Navbar from "@/components/Navbar";
 
 const jura = Jura({
   subsets: ["latin"],
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className={jura.className}>
                 <UserProvider>
                     <ConnectionProvider>
+                        <Navbar />
                         <Toaster
                             position="top-right"
                             toastOptions={{

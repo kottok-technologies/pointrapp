@@ -1,8 +1,5 @@
-import {motion} from "framer-motion";
-import Image from "next/image";
 import {useRouter} from "next/navigation";
-import {useEffect, useState} from "react";
-import {User} from "@/lib/types";
+import {useState} from "react";
 import {Card} from "@/components/Card";
 
 export default function RoomSelectionCard() {

@@ -72,9 +72,9 @@ export function useUserData() {
                 const updated = { ...allUsers, [newUser.id]: newUser };
                 saveAvailableUsers(updated);
                 setAvailableUsers(updated);
-                setUser(newUser);
-                setActiveUserId(newUser.id);
-                createUserRemote(newUser);
+                // setUser(newUser);
+                // setActiveUserId(newUser.id);
+                // createUserRemote(newUser);
             }
         });
     }, [loadAvailableUsers, saveAvailableUsers, getActiveUserId, setActiveUserId, createUserRemote]);
@@ -175,6 +175,17 @@ export function useUserData() {
         [availableUsers, user, saveAvailableUsers, setActiveUserId, createUser]
     );
 
+    // Log out user
+    const logout = useCallback(() => {
+        // Remove active user tracking
+        localStorage.removeItem(ACTIVE_USER_KEY);
+
+        // Clear current user (UI will treat it as “not logged in”)
+        setUser(null);
+
+        console.log("👋 User logged out (active user cleared)");
+    }, []);
+
     // inside useUserData (add near the other actions)
     const setRoomForUser = useCallback(
         async (roomId: string | null) => {
@@ -208,6 +219,7 @@ export function useUserData() {
         switchUser,
         updateUserField,
         deleteUser,
+        logout,
         refreshUser,
         setRoomForUser,
     };
