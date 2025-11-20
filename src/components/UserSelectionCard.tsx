@@ -87,7 +87,7 @@ export default function UserSelectionCard() {
             =========================================================== */}
             {isModalOpen && (
                 <EditUserModal
-                    initialName={newUserName}
+                    open={isModalOpen}
                     onClose={() => setModalOpen(false)}
                 />
             )}

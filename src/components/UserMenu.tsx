@@ -80,9 +80,7 @@ export default function UserMenu() {
             {/* Edit Modal */}
             {showEditModal && (
                 <EditUserModal
-                    initialName={user.name}
-                    onClose={() => setShowEditModal(false)}
-                />
+                    onClose={() => setShowEditModal(false)} open={showEditModal}                />
             )}
         </div>
     );

@@ -2,33 +2,30 @@
 
 import { useState } from "react";
 import { useUser } from "@/context/UserContext";
+import Modal from "@/components/Modal";
+import AvatarPicker from "@/components/AvatarPicker";
 
-export default function EditUserModal({
-                                          initialName = "",
-                                          onClose,
-                                      }: {
-    initialName?: string;
+interface EditUserModalProps {
+    open: boolean;
     onClose: () => void;
-}) {
-    const { createUser } = useUser();
-    const [name, setName] = useState(initialName);
+}
+
+export default function EditUserModal({ open, onClose }: EditUserModalProps) {
+    const { user, updateUserField } = useUser();
+
+    // 👇 Hooks MUST always run, even if user is null
+    const [name, setName] = useState(() => user?.name ?? "");
+    const [avatar, setAvatar] = useState(() => user?.avatarUrl ?? "");
 
     return (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-10">
-            <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm">
-                <h2 className="text-lg font-semibold mb-4">User Details</h2>
-
-                <input
-                    type="text"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4"
-                    placeholder="Display name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                />
-
-                <div className="flex justify-end gap-3">
+        <Modal
+            open={open}
+            onClose={onClose}
+            title="Edit User"
+            footer={
+                <>
                     <button
-                        className="px-4 py-2 bg-gray-200 rounded-lg"
+                        className="px-3 py-2 bg-gray-200 rounded-lg"
                         onClick={onClose}
                     >
                         Cancel
@@ -36,16 +33,28 @@ export default function EditUserModal({
 
                     <button
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-                        onClick={async () => {
-                            if (!name.trim()) return;
-                            await createUser(name);
+                        onClick={() => {
+                            updateUserField("name", name);
+                            updateUserField("avatarUrl", avatar);
                             onClose();
                         }}
                     >
                         Save
                     </button>
-                </div>
+                </>
+            }
+        >
+            <div className="space-y-4">
+                <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    placeholder="Display name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                />
+
+                <AvatarPicker value={avatar} onChange={setAvatar} />
             </div>
-        </div>
+        </Modal>
     );
 }
