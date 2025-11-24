@@ -1,6 +1,7 @@
 resource "aws_route53_record" "validation" {
   for_each = {
-    for r in aws_apprunner_custom_domain_association.domain.certificate_validation_records : r.name => r
+    for r in try(aws_apprunner_custom_domain_association.domain.certificate_validation_records, []) :
+    r.name => r
   }
   zone_id = var.route53_zone_id
   name    = each.value.name
