@@ -37,3 +37,9 @@ variable "certificate_validation_records" {
   }))
   default = []
 }
+
+variable "cdn_domain_avatars" {
+  type        = string
+  description = "CDN domain for avatar hosting"
+  default     = "cdn.pointrapp.com"
+}

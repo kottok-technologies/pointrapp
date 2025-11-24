@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "avatars" {
-  bucket = "${var.project_name}-${var.environment}"
+  bucket = "${var.project_name}-avatars"
 
   tags = {
     Environment = var.environment

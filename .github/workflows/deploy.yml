@@ -52,12 +52,13 @@ jobs:
           echo "📂 Verifying built Lambda packages..."
           ls -lah terraform/modules/infra/lambdas/dist
 
-      # 🧰 Step 5: Create or ensure global ECR (only once)
-      - name: Terraform Apply Global ECR
+      # 🧰 Step 5: Create or ensure global ECR and Avatars resources(only once)
+      - name: Terraform Apply Global ECR and Avatars Resources
         run: |
           terraform -chdir=${{ env.TERRAFORM_DIR }} apply \
             -auto-approve \
-            -target=module.ecr
+            -target=module.ecr \
+            -target=module.avatars
 
       # 🔑 Step 6: Login to ECR
       - name: Login to ECR

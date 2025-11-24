@@ -1,6 +1,6 @@
 resource "aws_route53_record" "avatars_cname" {
   zone_id = var.route53_zone_id
-  name    = "cdn.pointrapp.com"
+  name    = var.cdn_domain_avatars
   type    = "CNAME"
   ttl     = 300
   records = [aws_cloudfront_distribution.avatars.domain_name]

@@ -27,7 +27,7 @@ resource "aws_cloudfront_distribution" "avatars" {
   comment             = "PointrApp avatars CDN"
   default_root_object = ""
 
-  aliases = "cdn.pointrapp.com"
+  aliases = [var.cdn_domain_avatars]
 
   origin {
     domain_name = aws_s3_bucket.avatars.bucket_regional_domain_name

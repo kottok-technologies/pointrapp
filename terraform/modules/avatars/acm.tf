@@ -1,5 +1,5 @@
 resource "aws_acm_certificate" "avatars_cdn" {
-  domain_name       = "cdn.pointrapp.com"
+  domain_name       = var.cdn_domain_avatars
   validation_method = "DNS"
 }
 

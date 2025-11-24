@@ -19,6 +19,14 @@ module "route53" {
   certificate_validation_records = var.certificate_validation_records
 }
 
+module "avatars" {
+  source = "./modules/avatars"
+  project_name = var.project_name
+  environment = var.environment
+  route53_zone_id = var.route53_zone_id
+  cdn_domain_avatars = var.cdn_domain_avatars
+}
+
 output "dns_target" {
   description = "App Runner DNS target"
   value       = module.infra.dns_target
