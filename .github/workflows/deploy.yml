@@ -1,11 +1,8 @@
 name: Deploy PointrApp
 
 on:
-  push:
-    branches:
-      - main
-      - dev
-
+  workflow-dispatch:
+  
 permissions:
   id-token: write
   contents: read
