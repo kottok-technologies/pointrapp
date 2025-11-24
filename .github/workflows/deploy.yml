@@ -1,7 +1,7 @@
 name: Deploy PointrApp
 
 on:
-  workflow-dispatch:
+  workflow_dispatch:
   
 permissions:
   id-token: write
