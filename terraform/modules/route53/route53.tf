@@ -1,11 +1,6 @@
-resource "terraform_data" "domain_ready" {
-  depends_on = [aws_apprunner_custom_domain_association.domain]
-}
-
-
 resource "aws_route53_record" "validation" {
   for_each = {
-    for r in try(aws_apprunner_custom_domain_association.domain.certificate_validation_records, []) :
+    for r in try(var.certificate_validation_records, []) :
     r.name => r
   }
   zone_id = var.route53_zone_id
@@ -13,8 +8,6 @@ resource "aws_route53_record" "validation" {
   type    = each.value.type
   records = [each.value.value]
   ttl     = 60
-
-  depends_on = [terraform_data.domain_ready]
 }
 
 resource "aws_route53_record" "subdomain" {
@@ -22,5 +15,5 @@ resource "aws_route53_record" "subdomain" {
   name    = var.environment == "dev" ? "dev" : "www"
   type    = "CNAME"
   ttl     = 300
-  records = [aws_apprunner_custom_domain_association.domain.dns_target]
+  records = [var.dns_target]
 }

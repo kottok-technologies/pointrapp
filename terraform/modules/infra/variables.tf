@@ -14,12 +14,6 @@ variable "image_uri" {
   description = "ECR image URI to deploy"
 }
 
-variable "route53_zone_id" {
-  type        = string
-  description = "Zone ID for pointrapp in R53"
-  default     = "Z021125431208XT5W7T05"
-}
-
 variable "stage" {
   type        = string
   description = "Stage for the WebSocket APIs"
