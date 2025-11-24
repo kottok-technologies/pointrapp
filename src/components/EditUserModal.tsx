@@ -68,7 +68,7 @@ export default function EditUserModal({ open, onClose }: EditUserModalProps) {
                     onChange={(e) => setName(e.target.value)}
                 />
 
-                <AvatarPicker value={avatar} onChange={setAvatar} />
+                <AvatarPicker value={avatar} onChange={(url) => setAvatar(url ?? "")}/>
             </div>
         </Modal>
     );

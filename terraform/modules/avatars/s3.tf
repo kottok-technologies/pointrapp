@@ -15,3 +15,22 @@ resource "aws_s3_bucket_public_access_block" "avatars" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
+
+resource "aws_s3_bucket_cors_configuration" "avatars_cors" {
+  bucket = aws_s3_bucket.avatars.bucket
+
+  cors_rule {
+    id = "pointrapp-avatars"
+    allowed_methods = ["GET", "HEAD", "PUT"]
+    allowed_origins = [
+      "http://localhost:3000",
+      "https://pointr.app",
+      "https://www.pointr.app",
+      "https://dev.pointr.app",
+      "https://cdn.pointrapp.com"
+    ]
+    allowed_headers = ["*"]
+    expose_headers  = []
+    max_age_seconds = 3000
+  }
+}
