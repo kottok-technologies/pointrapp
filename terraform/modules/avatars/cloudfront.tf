@@ -45,6 +45,13 @@ resource "aws_cloudfront_distribution" "avatars" {
 
     viewer_protocol_policy = "redirect-to-https"
 
+    forwarded_values {
+      query_string = false,
+      cookies {
+        forward = "none"
+      }
+    }
+
     compress = true
 
     min_ttl     = 0
