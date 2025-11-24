@@ -10,3 +10,11 @@ resource "aws_route53_record" "validation" {
 
   depends_on = [aws_apprunner_custom_domain_association.domain]
 }
+
+resource "aws_route53_record" "subdomain" {
+  zone_id = var.route53_zone_id
+  name    = var.environment == "dev" ? "dev" : "www"
+  type    = "CNAME"
+  ttl     = 300
+  records = [aws_apprunner_custom_domain_association.domain.dns_target]
+}
