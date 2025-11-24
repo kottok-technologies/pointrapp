@@ -1,3 +1,8 @@
+resource "terraform_data" "domain_ready" {
+  depends_on = [aws_apprunner_custom_domain_association.domain]
+}
+
+
 resource "aws_route53_record" "validation" {
   for_each = {
     for r in try(aws_apprunner_custom_domain_association.domain.certificate_validation_records, []) :
@@ -9,7 +14,7 @@ resource "aws_route53_record" "validation" {
   records = [each.value.value]
   ttl     = 60
 
-  depends_on = [aws_apprunner_custom_domain_association.domain]
+  depends_on = [terraform_data.domain_ready]
 }
 
 resource "aws_route53_record" "subdomain" {
