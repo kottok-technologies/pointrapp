@@ -5,7 +5,7 @@ import { getItem, putItem, deleteItem } from "@/lib/dynamo";
 const PatchSchema = z.object({
     name: z.string().optional(),
     role: z.enum(["facilitator", "participant", "observer"]).optional(),
-    avatarUrl: z.string().url().optional().nullable(),
+    avatarUrl: z.string().optional().nullable(),
     lastActiveAt: z.string().optional(),
     roomId: z.string().optional().nullable(),
 });
@@ -16,7 +16,7 @@ export async function GET(
 ) {
     try {
         const { userId } = await context.params;
-        const user = await getItem(`USER#${userId}`, `USER#${userId}`);
+        const user = await getItem(`USER#${userId}`);
 
         if (!user)
             return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -37,7 +37,7 @@ export async function PATCH(
         const body = await req.json();
         const parsed = PatchSchema.parse(body);
 
-        const existing = await getItem(`USER#${userId}`, `USER#${userId}`);
+        const existing = await getItem(`USER#${userId}`);
         if (!existing)
             return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -63,7 +63,7 @@ export async function DELETE(
     try {
         const { userId } = await context.params;
 
-        await deleteItem(`USER#${userId}`, `USER#${userId}`);
+        await deleteItem(`USER#${userId}`);
 
         return NextResponse.json({ message: "User deleted" }, { status: 200 });
     } catch (err) {

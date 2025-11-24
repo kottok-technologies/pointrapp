@@ -8,7 +8,7 @@ const UserSchema = z.object({
     id: z.string().optional(),
     name: z.string().min(1),
     role: z.enum(["facilitator", "participant", "observer"]),
-    avatarUrl: z.string().url().optional(),
+    avatarUrl: z.string().optional(),
     joinedAt: z.string().optional(),
     lastActiveAt: z.string().optional(),
     roomId: z.string().optional(),

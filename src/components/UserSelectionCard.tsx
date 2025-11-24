@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { useUser } from "@/context/UserContext";
 import { Card } from "@/components/Card";
-import EditUserModal from "@/components/EditUserModal"; // You'll build this
 import Image from "next/image";
 
 export default function UserSelectionCard() {
-    const { availableUsers, switchUser } = useUser();
-    const [isModalOpen, setModalOpen] = useState(false);
+    const { availableUsers, switchUser, createUser } = useUser();
 
     const [newUserName, setNewUserName] = useState("");
 
@@ -59,7 +57,14 @@ export default function UserSelectionCard() {
                 {/* ===========================================================
                   New User Section
                 =========================================================== */}
-                <div className="flex flex-col gap-3">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault(); // prevent page reload
+                        if (newUserName.trim().length === 0) return;
+                        createUser(newUserName);
+                    }}
+                    className="flex flex-col gap-3"
+                >
                     <h2 className="text-lg font-semibold text-gray-800">Create New User</h2>
 
                     <input
@@ -71,26 +76,14 @@ export default function UserSelectionCard() {
                     />
 
                     <button
-                        onClick={() => {
-                            if (newUserName.trim().length === 0) return;
-                            setModalOpen(true);
-                        }}
+                        type="submit"
                         className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                     >
                         Create
                     </button>
-                </div>
-            </div>
+                </form>
 
-            {/* ===========================================================
-              User Edit Modal (Reusable for editing or creation)
-            =========================================================== */}
-            {isModalOpen && (
-                <EditUserModal
-                    open={isModalOpen}
-                    onClose={() => setModalOpen(false)}
-                />
-            )}
+            </div>
         </Card>
     );
 }

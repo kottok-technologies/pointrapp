@@ -27,7 +27,7 @@ export async function POST(
         const parsed = JoinRoomSchema.parse(body);
 
         // 🧠 Ensure the room exists
-        const room = await getItem(`ROOM#${roomId}`, `ROOM#${roomId}`);
+        const room = await getItem(`ROOM#${roomId}`);
         if (!room) {
             return NextResponse.json(
                 { error: `Room ${roomId} not found` },

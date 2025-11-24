@@ -12,7 +12,7 @@ export async function GET(
         const pk = `ROOM#${roomId}`;
 
         // 1️⃣ Fetch the main Room record
-        const roomItem = await getItem<Record<string, unknown>>(pk, pk);
+        const roomItem = await getItem<Record<string, unknown>>(pk);
         if (!roomItem) {
             return NextResponse.json(
                 { error: `Room ${roomId} not found` },

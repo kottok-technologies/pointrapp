@@ -18,13 +18,13 @@ export async function POST(
         const parsed = RevealSchema.parse(body);
 
         // 🧠 Verify the room exists
-        const room = await getItem(`ROOM#${roomId}`, `ROOM#${roomId}`);
+        const room = await getItem(`ROOM#${roomId}`);
         if (!room) {
             return NextResponse.json({ error: `Room ${roomId} not found` }, { status: 404 });
         }
 
         // ✅ Verify the story exists
-        const story = await getItem(`ROOM#${roomId}`, `STORY#${parsed.storyId}`);
+        const story = await getItem(`STORY#${parsed.storyId}`);
         if (!story) {
             return NextResponse.json(
                 { error: `Story ${parsed.storyId} not found in room ${roomId}` },

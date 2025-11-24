@@ -20,7 +20,7 @@ export async function POST(
         const parsed = SubmitVoteSchema.parse(body);
 
         // 🧠 Verify the room exists
-        const room = await getItem<Room>(`ROOM#${roomId}`, `ROOM#${roomId}`);
+        const room = await getItem<Room>(`ROOM#${roomId}`);
         if (!room) {
             return NextResponse.json(
                 { error: `Room ${roomId} not found` },
@@ -30,7 +30,6 @@ export async function POST(
 
         // ✅ Verify the story exists under this room
         const story = await getItem<Story>(
-            `ROOM#${roomId}`,
             `STORY#${parsed.storyId}`
         );
         if (!story) {

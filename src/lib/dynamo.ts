@@ -119,22 +119,22 @@ export async function putItem<T extends object>(item: T): Promise<void> {
 }
 
 /** ✅ Get item by PK + SK */
-export async function getItem<T>(pk: string, sk: string): Promise<T | null> {
+export async function getItem<T>(pk: string): Promise<T | null> {
     const { Item } = await dynamo.send(
         new GetItemCommand({
             TableName,
-            Key: safeMarshall({ PK: pk, SK: sk }),
+            Key: safeMarshall({ PK: pk}),
         })
     );
     return Item ? safeUnmarshall<T>(Item as AttrMap) : null;
 }
 
 /** ✅ Delete by PK + SK */
-export async function deleteItem(pk: string, sk: string): Promise<void> {
+export async function deleteItem(pk: string): Promise<void> {
     await dynamo.send(
         new DeleteItemCommand({
             TableName,
-            Key: safeMarshall({ PK: pk, SK: sk }),
+            Key: safeMarshall({ PK: pk}),
         })
     );
 }

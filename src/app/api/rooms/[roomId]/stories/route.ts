@@ -21,7 +21,7 @@ export async function POST(
         const parsed = CreateStorySchema.parse(body);
 
         // 🧠 Verify that the room exists
-        const room = await getItem<Room>(`ROOM#${roomId}`, `ROOM#${roomId}`);
+        const room = await getItem<Room>(`ROOM#${roomId}`);
         if (!room) {
             return NextResponse.json(
                 { error: `Room ${roomId} not found` },

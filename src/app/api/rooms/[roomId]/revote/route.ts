@@ -23,7 +23,7 @@ export async function POST(
         const parsed = RevoteSchema.parse(body);
 
         // 🧠 Verify room exists
-        const room = await getItem(`ROOM#${roomId}`, `ROOM#${roomId}`);
+        const room = await getItem(`ROOM#${roomId}`);
         if (!room) {
             return NextResponse.json(
                 { error: `Room ${roomId} not found` },
@@ -32,7 +32,7 @@ export async function POST(
         }
 
         // ✅ Verify story exists
-        const story = await getItem(`ROOM#${roomId}`, `STORY#${parsed.storyId}`);
+        const story = await getItem(`STORY#${parsed.storyId}`);
         if (!story) {
             return NextResponse.json(
                 { error: `Story ${parsed.storyId} not found in room ${roomId}` },
@@ -51,7 +51,7 @@ export async function POST(
 
         // 🧹 Remove existing votes
         for (const vote of votesToDelete) {
-            await deleteItem(vote.pK, vote.sK);
+            await deleteItem(vote.pK);
         }
 
         // 🔄 Reset story status for re-estimation

@@ -35,6 +35,10 @@ export function useUserData() {
         localStorage.setItem(ACTIVE_USER_KEY, id);
     }, []);
 
+    const removeActiveUserId = useCallback(() => {
+        localStorage.removeItem(ACTIVE_USER_KEY);
+    }, []);
+
     const createUserRemote = useCallback(async (newUser: User) => {
         try {
             const res = await fetch(`/api/users`, {
@@ -48,6 +52,18 @@ export function useUserData() {
         }
     }, []);
 
+    const deleteUserRemote = useCallback(async (userId: string) => {
+        try {
+            const res = await fetch(`/api/users/${userId}`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+            });
+            if (!res.ok) console.warn("⚠️ Failed to delete user remotely:", await res.text());
+        } catch (err) {
+            console.error("❌ Remote user deletion failed:", err);
+        }
+    }, []);
+
     // -----------------------------------------------------------
     // 🧩 Initialize on mount
     // -----------------------------------------------------------
@@ -58,23 +74,9 @@ export function useUserData() {
         const activeId = getActiveUserId();
 
         requestAnimationFrame(() => {
+            setAvailableUsers(allUsers)
             if (activeId && allUsers[activeId]) {
-                setAvailableUsers(allUsers);
                 setUser(allUsers[activeId]);
-            } else {
-                const newUser: User = {
-                    id: nanoid(12),
-                    name: "Anonymous",
-                    role: "participant",
-                    joinedAt: new Date().toISOString(),
-                    roomId: "lobby",
-                };
-                const updated = { ...allUsers, [newUser.id]: newUser };
-                saveAvailableUsers(updated);
-                setAvailableUsers(updated);
-                // setUser(newUser);
-                // setActiveUserId(newUser.id);
-                // createUserRemote(newUser);
             }
         });
     }, [loadAvailableUsers, saveAvailableUsers, getActiveUserId, setActiveUserId, createUserRemote]);
@@ -111,12 +113,13 @@ export function useUserData() {
     }, [user, availableUsers, saveAvailableUsers, createUserRemote]);
 
     const createUser = useCallback(
-        async (name = "Anonymous", role: User["role"] = "participant"): Promise<User> => {
+        async (name = "Anonymous", role: User["role"] = "observer", roomId = "lobby"): Promise<User> => {
             const newUser: User = {
                 id: nanoid(12),
                 name,
                 role,
                 joinedAt: new Date().toISOString(),
+                roomId,
             };
             const updated = { ...availableUsers, [newUser.id]: newUser };
             setAvailableUsers(updated);
@@ -156,23 +159,16 @@ export function useUserData() {
     );
 
     const deleteUser = useCallback(
-        (userId: string) => {
+        async (userId: string) => {
             const updated = { ...availableUsers };
             delete updated[userId];
             setAvailableUsers(updated);
             saveAvailableUsers(updated);
-
-            if (user?.id === userId) {
-                const nextId = Object.keys(updated)[0];
-                if (nextId) {
-                    setUser(updated[nextId]);
-                    setActiveUserId(nextId);
-                } else {
-                    createUser().then(setUser);
-                }
-            }
+            setUser(null);
+            removeActiveUserId();
+            await deleteUserRemote(userId);
         },
-        [availableUsers, user, saveAvailableUsers, setActiveUserId, createUser]
+        [availableUsers, saveAvailableUsers, removeActiveUserId, deleteUserRemote]
     );
 
     // Log out user
