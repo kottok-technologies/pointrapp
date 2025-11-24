@@ -7,4 +7,6 @@ resource "aws_route53_record" "validation" {
   type    = each.value.type
   records = [each.value.value]
   ttl     = 60
+
+  depends_on = [aws_apprunner_custom_domain_association.domain]
 }
