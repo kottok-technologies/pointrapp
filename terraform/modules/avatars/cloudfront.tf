@@ -1,6 +1,11 @@
-resource "aws_cloudfront_origin_access_identity" "avatars" {
-  comment = "OAI for pointrapp avatars"
+resource "aws_cloudfront_origin_access_control" "avatars" {
+  name                              = "pointrapp-avatars-oac"
+  description                       = "OAC for PointrApp avatar bucket"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
 }
+
 
 resource "aws_s3_bucket_policy" "avatars" {
   bucket = aws_s3_bucket.avatars.id
@@ -9,13 +14,26 @@ resource "aws_s3_bucket_policy" "avatars" {
     Version = "2012-10-17",
     Statement = [
       {
-        Sid    = "AllowCloudFrontRead"
-        Effect = "Allow"
+        Sid      = "AllowCloudFrontOACRead"
+        Effect   = "Allow"
         Principal = {
-          AWS = aws_cloudfront_origin_access_identity.avatars.iam_arn
+          Service = "cloudfront.amazonaws.com"
         }
-        Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.avatars.arn}/*"
+        Action   = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "${aws_s3_bucket.avatars.arn}",
+          "${aws_s3_bucket.avatars.arn}/*"
+        ]
+
+        # 🔥 Required to restrict access ONLY to your distribution
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.avatars.arn
+          }
+        }
       }
     ]
   })
@@ -34,8 +52,10 @@ resource "aws_cloudfront_distribution" "avatars" {
     origin_id   = "avatars-origin"
 
     s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.avatars.cloudfront_access_identity_path
+      origin_access_identity = null
     }
+
+    origin_access_control_id = aws_cloudfront_origin_access_control.avatars.id
   }
 
   default_cache_behavior {
