@@ -51,10 +51,6 @@ resource "aws_cloudfront_distribution" "avatars" {
     domain_name = aws_s3_bucket.avatars.bucket_regional_domain_name
     origin_id   = "avatars-origin"
 
-    s3_origin_config {
-      origin_access_identity = null
-    }
-
     origin_access_control_id = aws_cloudfront_origin_access_control.avatars.id
   }
 
