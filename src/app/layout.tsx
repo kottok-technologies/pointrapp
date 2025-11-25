@@ -4,7 +4,9 @@ import "@/styles/globals.css";
 import { Toaster } from "react-hot-toast";
 import {UserProvider} from "@/context/UserContext";
 import {ConnectionProvider} from "@/context/ConnectionContext";
-import Navbar from "@/components/Navbar";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import {ModalProvider} from "@/context/ModalContext";
 
 const jura = Jura({
   subsets: ["latin"],
@@ -24,16 +26,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className={jura.className}>
                 <UserProvider>
                     <ConnectionProvider>
-                        <Navbar />
-                        <Toaster
-                            position="top-right"
-                            toastOptions={{
-                                style: { background: "#1F2937", color: "#fff", borderRadius: "8px" },
-                            }}
-                        />
-                        {children}
+                        <ModalProvider>
+                            <Navbar />
+                            <Toaster
+                                    position="top-right"
+                                    toastOptions={{
+                                        style: { background: "#1F2937", color: "#fff", borderRadius: "8px" },
+                                    }}
+                                />
+                                {children}
+                            <Footer />
+                        </ModalProvider>
                     </ConnectionProvider>
                 </UserProvider>
+                <div id="modal-root"></div>
             </body>
         </html>
     );

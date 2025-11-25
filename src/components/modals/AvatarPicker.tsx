@@ -1,10 +1,11 @@
-// src/components/ui/AvatarPicker.tsx
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useModal } from "@/context/ModalContext";
+import CropModal from "@/components/modals/CropModal";
 
-const AVATAR_OPTIONS = [
+const PRESET_AVATARS = [
     "/images/avatars/cat1.png",
     "/images/avatars/cat2.png",
     "/images/avatars/dog1.png",
@@ -12,25 +13,74 @@ const AVATAR_OPTIONS = [
     "/images/avatars/ghost1.png",
 ];
 
-type AvatarPickerProps = {
+const SAVED_AVATARS_KEY = "pointrapp:savedAvatars";
+
+export default function AvatarPicker({
+                                         value,
+                                         onChange,
+                                     }: {
     value?: string | null;
     onChange: (url: string | null) => void;
-};
+}) {
+    const { openModal, closeModal } = useModal();
 
-export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
     const [selected, setSelected] = useState<string | null>(value ?? null);
     const [uploading, setUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [urlInput, setUrlInput] = useState("");
+    const [savedAvatars, setSavedAvatars] = useState<string[]>([]);
 
-    const handleSelect = (url: string | null) => {
+    // -----------------------------
+    // Load saved avatars
+    // -----------------------------
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        try {
+            const stored = JSON.parse(localStorage.getItem(SAVED_AVATARS_KEY) || "[]");
+            if (Array.isArray(stored)) setSavedAvatars(stored);
+        } catch {
+            // ignore
+        }
+    }, []);
+
+    const persistAvatar = (url: string) => {
+        if (!url) return;
+
+        setSavedAvatars((prev) => {
+            if (prev.includes(url)) return prev;
+            const updated = [...prev, url];
+            localStorage.setItem(SAVED_AVATARS_KEY, JSON.stringify(updated));
+            return updated;
+        });
+    };
+
+    const handleFinalSelect = (url: string) => {
+        persistAvatar(url);
         setSelected(url);
         onChange(url);
     };
 
-    const handleFileChange = async (
-        event: React.ChangeEvent<HTMLInputElement>
-    ) => {
+    // -----------------------------
+    // 📌 Open Crop Modal
+    // -----------------------------
+    const openCropper = (src: string) => {
+        openModal(
+            <CropModal
+                imageSrc={src}
+                onClose={closeModal}
+                onSave={(croppedUrl) => {
+                    handleFinalSelect(croppedUrl);
+                    closeModal();
+                }}
+            />
+        );
+    };
+
+    // -----------------------------
+    // Upload Flow (S3 → crop → save)
+    // -----------------------------
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -38,72 +88,64 @@ export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
         setUploading(true);
 
         try {
-            // 1️⃣ Ask backend for presigned URL
             const res = await fetch(
-                `/api/avatar/upload-url?contentType=${encodeURIComponent(
-                    file.type || "image/png"
-                )}`
+                `/api/avatar/upload-url?contentType=${encodeURIComponent(file.type || "image/png")}`
             );
-            if (!res.ok) {
-                throw new Error("Failed to get upload URL");
-            }
+            if (!res.ok) throw new Error("Failed to get upload URL");
+
             const { uploadUrl, publicUrl } = await res.json();
 
-            // 2️⃣ Upload directly to S3 via presigned URL
             const putRes = await fetch(uploadUrl, {
                 method: "PUT",
-                headers: {
-                    "Content-Type": file.type || "image/png",
-                },
+                headers: { "Content-Type": file.type || "image/png" },
                 body: file,
             });
+            if (!putRes.ok) throw new Error("Upload failed");
 
-            if (!putRes.ok) {
-                throw new Error("Upload failed");
-            }
-
-            // 3️⃣ Update selection
-            handleSelect(publicUrl);
+            // ✔ Now crop it BEFORE selecting/persisting
+            openCropper(publicUrl);
         } catch (err) {
-            console.error("❌ Avatar upload failed:", err);
-            setUploadError("Failed to upload avatar. Please try again.");
+            console.error("Avatar upload failed:", err);
+            setUploadError("Failed to upload avatar.");
         } finally {
             setUploading(false);
-            // reset file input so same file can be re-selected
             event.target.value = "";
         }
     };
 
+    // -----------------------------
+    // Manual URL input
+    // -----------------------------
     const handleUrlApply = () => {
         const trimmed = urlInput.trim();
         if (!trimmed) return;
-        // naive validation
+
         if (!/^https?:\/\/.+/i.test(trimmed)) {
-            setUploadError("Please enter a valid URL (starting with http or https).");
+            setUploadError("Please enter a valid URL.");
             return;
         }
-        setUploadError(null);
-        handleSelect(trimmed);
+
+        setUrlInput("");
+
+        // Send to cropper before persisting
+        openCropper(trimmed);
     };
+
+    const allAvatars = [...PRESET_AVATARS, ...savedAvatars];
 
     return (
         <div className="space-y-4">
-            {/* Preset avatars */}
+            {/* PICKER GRID */}
             <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                    Choose an avatar
-                </p>
+                <p className="text-sm font-medium text-gray-700 mb-2">Choose an avatar</p>
                 <div className="grid grid-cols-3 gap-4">
-                    {AVATAR_OPTIONS.map((url) => (
+                    {allAvatars.map((url) => (
                         <button
                             key={url}
                             type="button"
-                            onClick={() => handleSelect(url)}
-                            className={`relative rounded-xl border-2 overflow-hidden transition-all hover:scale-105
-                ${
-                                selected === url
-                                    ? "border-blue-600 shadow-lg"
-                                    : "border-transparent"
+                            onClick={() => openCropper(url)}
+                            className={`relative rounded-xl border-2 overflow-hidden transition-all hover:scale-105 ${
+                                selected === url ? "border-blue-600 shadow-lg" : "border-transparent"
                             }`}
                         >
                             <Image
@@ -113,9 +155,6 @@ export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
                                 height={100}
                                 className="object-cover w-full h-full"
                             />
-                            {selected === url && (
-                                <div className="absolute inset-0 bg-blue-500/20 pointer-events-none" />
-                            )}
                         </button>
                     ))}
                 </div>
@@ -123,26 +162,15 @@ export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
 
             {/* Upload */}
             <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">
-                    Or upload your own
-                </p>
+                <p className="text-sm font-medium text-gray-700">Or upload your own</p>
                 <input
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}
                     disabled={uploading}
-                    className="block w-full text-sm text-gray-700
-                     file:mr-3 file:py-2 file:px-3
-                     file:rounded-lg file:border-0
-                     file:bg-blue-600 file:text-white
-                     hover:file:bg-blue-700
-                     cursor-pointer"
+                    className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
                 />
-                {uploading && (
-                    <p className="text-xs text-gray-500">
-                        Uploading avatar, please wait...
-                    </p>
-                )}
+                {uploading && <p className="text-xs text-gray-500">Uploading...</p>}
             </div>
 
             {/* URL input */}
@@ -166,9 +194,7 @@ export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
                 </div>
             </div>
 
-            {uploadError && (
-                <p className="text-xs text-red-500">{uploadError}</p>
-            )}
+            {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
 
             {/* Preview */}
             {selected && (
@@ -182,9 +208,7 @@ export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
                             className="object-cover w-full h-full"
                         />
                     </div>
-                    <span className="text-xs text-gray-600 break-all">
-            {selected}
-          </span>
+                    <span className="text-xs text-gray-600 break-all">{selected}</span>
                 </div>
             )}
         </div>

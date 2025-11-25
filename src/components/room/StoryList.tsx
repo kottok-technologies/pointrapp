@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRoom } from "@/context/RoomContext";
-import { FacilitatorControls } from "@/components/FacilitatorControls";
+import { FacilitatorControls } from "@/components/room/FacilitatorControls";
 
 export function StoryList() {
     const { room, stories, activeStory, setActiveStory, refresh } = useRoom();

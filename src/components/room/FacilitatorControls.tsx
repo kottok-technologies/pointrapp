@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRoom } from "../context/RoomContext";
+import { useRoom } from "../../context/RoomContext";
 import {useUser} from "@/context/UserContext";
 
 export function FacilitatorControls() {

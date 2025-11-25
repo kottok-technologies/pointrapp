@@ -13,7 +13,8 @@ const nextConfig: NextConfig = {
                 hostname: "pointrapp-avatars.s3.us-east-1.amazonaws.com",
                 pathname: "/avatars/**",
             }
-        ]
+        ],
+        unoptimized: true,
     }
 };
 

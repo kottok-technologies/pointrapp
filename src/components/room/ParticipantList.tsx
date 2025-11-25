@@ -1,6 +1,6 @@
 "use client";
 
-import { useRoom } from "../context/RoomContext";
+import { useRoom } from "../../context/RoomContext";
 import Image from "next/image";
 
 export function ParticipantList() {

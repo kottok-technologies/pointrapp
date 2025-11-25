@@ -3,12 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import Image from "next/image";
-import EditUserModal from "@/components/EditUserModal";
+import EditUserModal from "@/components/modals/EditUserModal";
+import { useModal } from "@/context/ModalContext";
 
 export default function UserMenu() {
     const { user, logout } = useUser();
+    const { openModal } = useModal();
     const [open, setOpen] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
 
     // Close menu when clicking outside
@@ -61,7 +62,7 @@ export default function UserMenu() {
                     <button
                         className="block w-full px-4 py-2 text-left hover:bg-gray-100"
                         onClick={() => {
-                            setShowEditModal(true);
+                            openModal(<EditUserModal />);
                             setOpen(false);
                         }}
                     >
@@ -75,12 +76,6 @@ export default function UserMenu() {
                         Log Out
                     </button>
                 </div>
-            )}
-
-            {/* Edit Modal */}
-            {showEditModal && (
-                <EditUserModal
-                    onClose={() => setShowEditModal(false)} open={showEditModal}                />
             )}
         </div>
     );

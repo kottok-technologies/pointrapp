@@ -1,31 +1,13 @@
 import {useRouter} from "next/navigation";
 import {useState} from "react";
-import {Card} from "@/components/Card";
-import {useUser} from "@/context/UserContext";
+import {Card} from "@/components/lobby/Card";
+import {CreateRoomModal} from "@/components/modals/CreateRoomModal";
+import {useModal} from "@/context/ModalContext";
 
 export default function RoomSelectionCard() {
-    const { user } = useUser();
+    const {openModal} = useModal();
     const router = useRouter();
     const [roomId, setRoomId] = useState("");
-
-    async function createRoom() {
-        if (!user) return;
-
-        const res = await fetch("/api/rooms", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                name: `${user.name}'s Room`,
-                createdBy: user.name,
-                deckType: "fibonacci",
-                allowObservers: true,
-                revealMode: "allReveal",
-            }),
-        });
-
-        const data = await res.json();
-        if (res.ok && data.roomId) router.push(`/room/${data.roomId}`);
-    }
 
     function joinExisting() {
         if (roomId.trim()) router.push(`/room/${roomId.trim()}`);
@@ -34,7 +16,7 @@ export default function RoomSelectionCard() {
     return (
         <Card>
             <button
-                onClick={createRoom}
+                onClick={() => openModal(<CreateRoomModal/>)}
                 className="w-full bg-blue-600 text-white rounded-md py-2 hover:bg-blue-700 transition disabled:opacity-50"
             >
                 Create Room

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@/context/UserContext";
-import { Card } from "@/components/Card";
+import { Card } from "@/components/lobby/Card";
 import Image from "next/image";
 
 export default function UserSelectionCard() {

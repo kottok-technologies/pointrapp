@@ -9,12 +9,19 @@ export interface User {
     roomId?: string | null; // currently joined room
 }
 
+export type DeckType =
+    | "fibonacci"
+    | "tshirt"
+    | "modified-fibonacci"
+    | "powers-of-two"
+    | "custom";
+
 // Room (main session)
 export interface Room {
     id: string; // UUID or short code (e.g. "ABC123")
     name: string;
     createdBy: string; // userId
-    deckType: "fibonacci" | "tshirt" | "powersOf2" | "custom";
+    deckType: DeckType;
     customDeckValues?: string[];
     status: "active" | "ended";
     revealMode: "allReveal" | "instant";
@@ -22,6 +29,15 @@ export interface Room {
     createdAt: string;
     updatedAt: string;
     currentStoryId?: string;
+}
+
+export interface CreateRoomPayload {
+    name: string;
+    deckType: DeckType;
+    customDeckValues?: string[];
+    role: "facilitator" | "participant";
+    revealMode: "manual" | "auto";
+    allowObservers: boolean;
 }
 
 // Story (individual estimation item)

@@ -6,12 +6,12 @@ import Image from "next/image";
 
 export function Card({ children }: { children: React.ReactNode }) {
     return (
-        <main className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+        <>
             <motion.div
                 initial={{ opacity: 0, y: 30, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
-                className="w-full max-w-sm bg-white p-8 rounded-2xl shadow-md border border-gray-100 text-center"
+                className="w-full max-w-sm bg-white p-8 rounded-2xl shadow-md border border-gray-100 text-center mx-auto"
             >
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -39,6 +39,6 @@ export function Card({ children }: { children: React.ReactNode }) {
             >
                 PointrApp — lightweight agile estimation made simple
             </motion.p>
-        </main>
+        </>
     )
 }
