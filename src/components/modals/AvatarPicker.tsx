@@ -95,12 +95,18 @@ export default function AvatarPicker({
 
             const { uploadUrl, publicUrl } = await res.json();
 
-            const putRes = await fetch(uploadUrl, {
-                method: "PUT",
-                headers: { "Content-Type": file.type || "image/png" },
-                body: file,
+            const form = new FormData();
+            form.append("file", file);
+            form.append("crop", JSON.stringify(cropRect)); // from your cropper UI
+
+            const res = await fetch("/api/avatar/crop", {
+                method: "POST",
+                body: form,
             });
-            if (!putRes.ok) throw new Error("Upload failed");
+
+            const { url } = await res.json();
+            handleSelect(url);
+            persistAvatar(url);
 
             // ✔ Now crop it BEFORE selecting/persisting
             openCropper(publicUrl);
