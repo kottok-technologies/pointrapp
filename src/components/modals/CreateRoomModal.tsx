@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { useUser} from "@/context/UserContext";
-import {router} from "next/client";
+import { useRouter } from "next/navigation";
 import DeckTypeSelector from "@/components/modals/DeckTypeSelector";
 import type { DeckType } from "@/lib/types";
+import { useModal } from "@/context/ModalContext";
+
 
 export function CreateRoomModal() {
     const { user } = useUser();
+    const router = useRouter();
 
     // ✅ Initialize name safely (no SSR access)
     const [roomName, setRoomName] = useState("");
@@ -18,6 +21,7 @@ export function CreateRoomModal() {
     const [allowObservers, setAllowObservers] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { closeModal } = useModal();
 
     async function createRoom() {
 
@@ -35,14 +39,16 @@ export function CreateRoomModal() {
                 body: JSON.stringify({
                     name: roomName,
                     createdBy: user?.name,
-                    deckType: "fibonacci",
-                    allowObservers: true,
-                    revealMode: "allReveal",
+                    deckType,
+                    allowObservers,
+                    revealMode,
+                    customDeckValues,
                 }),
             });
 
             const data = await res.json();
             if (res.ok && data.roomId) router.push(`/room/${data.roomId}`);
+            closeModal();
         } catch (err) {
             if (err instanceof Error) setError(err.message);
             else setError("Failed to join room");
@@ -84,7 +90,7 @@ export function CreateRoomModal() {
                                 >
                                     <input
                                         type="radio"
-                                        name="revealMode"
+                                        name="role"
                                         value={r}
                                         checked={role === r}
                                         onChange={() => setRole(r)}
@@ -119,7 +125,7 @@ export function CreateRoomModal() {
                                 >
                                     <input
                                         type="radio"
-                                        name="role"
+                                        name="revealMode"
                                         value={r}
                                         checked={revealMode === r}
                                         onChange={() => setRevealMode(r)}

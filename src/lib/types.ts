@@ -24,7 +24,7 @@ export interface Room {
     deckType: DeckType;
     customDeckValues?: string[];
     status: "active" | "ended";
-    revealMode: "allReveal" | "instant";
+    revealMode: "manual" | "auto";
     allowObservers: boolean;
     createdAt: string;
     updatedAt: string;

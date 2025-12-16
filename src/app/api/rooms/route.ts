@@ -7,9 +7,9 @@ import { nanoid } from "nanoid";
 const CreateRoomSchema = z.object({
     name: z.string().min(1, "Room name is required"),
     createdBy: z.string().min(1, "CreatedBy (userId) is required"),
-    deckType: z.enum(["fibonacci", "tshirt", "powersOf2", "custom"]),
+    deckType: z.enum(["fibonacci", "tshirt", "powersOfTwo", "custom"]),
     allowObservers: z.boolean().default(true),
-    revealMode: z.enum(["allReveal", "instant"]).default("allReveal"),
+    revealMode: z.enum(["manual", "auto"]).default("manual"),
     customDeckValues: z.array(z.string()).optional(),
 });
 
@@ -23,7 +23,6 @@ export async function POST(req: Request) {
 
         const roomItem = {
             PK: `ROOM#${roomId}`,
-            SK: `ROOM#${roomId}`,
             EntityType: "Room",
             RoomId: roomId,
             Name: parsed.name,
