@@ -16,7 +16,7 @@ export function CreateRoomModal() {
     const [roomName, setRoomName] = useState("");
     const [deckType, setDeckType] = useState<DeckType>("fibonacci");
     const [customDeckValues, setCustomDeckValues] = useState<string[]>([]);
-    const [role, setRole] = useState<"facilitator" | "participant">("participant");
+    const [role, setRole] = useState<"facilitator" | "participant" | "observer">("participant");
     const [revealMode, setRevealMode] = useState<"manual" | "auto">("manual");
     const [allowObservers, setAllowObservers] = useState(true);
     const [loading, setLoading] = useState(false);
@@ -79,7 +79,7 @@ export function CreateRoomModal() {
                     <div>
                         <p className="text-sm font-medium text-gray-700 mb-2">Your Role</p>
                         <div className="flex justify-center gap-3 items-center text-sm">
-                            {(["facilitator", "participant"] as const).map((r) => (
+                            {(["facilitator", "participant", "observer"] as const).map((r) => (
                                 <label
                                     key={r}
                                     className={`flex w-full items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition ${

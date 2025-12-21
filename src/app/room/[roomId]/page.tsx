@@ -3,11 +3,10 @@
 import { StoryList } from "@/components/room/StoryList";
 import { VotePanel } from "@/components/room/VotePanel";
 import { ParticipantList } from "@/components/room/ParticipantList";
-import { JoinRoomModal } from "@/components/modals/JoinRoomModal";
 import { useRoom } from "@/context/RoomContext";
 
 export default function RoomPage() {
-    const { room, error, refresh } = useRoom();
+    const { error} = useRoom();
 
     if (error) return <p className="p-8 text-red-500">{error}</p>;
 
@@ -26,7 +25,6 @@ export default function RoomPage() {
                     <VotePanel />
                 </aside>
             </main>
-            <JoinRoomModal />
         </div>
     );
 }

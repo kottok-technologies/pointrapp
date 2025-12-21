@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import {queryByPK, getItem} from "@/lib/dynamo";
+import {getItem, queryByGSI} from "@/lib/dynamo";
 import type {Room, User, Story, Vote} from "@/lib/types";
 
 // ✅ GET /api/rooms/[roomId]
@@ -38,7 +38,7 @@ export async function GET(
         };
 
         // 2️⃣ Fetch all related items (users, stories)
-        const items = await queryByPK<Record<string, unknown>>(pk);
+        const items = await queryByGSI<Record<string, unknown>>("RoomIndex", "RoomId", roomId);
 
         const users: User[] = items
             .filter((i) => i.entityType === "User")

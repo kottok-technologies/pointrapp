@@ -171,7 +171,6 @@ export async function queryByGSI<T>(
 /** ✅ Partial update (safe) */
 export async function updateItem<T>(
     pk: string,
-    sk: string,
     updates: Partial<T>
 ): Promise<void> {
     const setExpressions: string[] = [];
@@ -189,7 +188,7 @@ export async function updateItem<T>(
     await dynamo.send(
         new UpdateItemCommand({
             TableName,
-            Key: safeMarshall({ PK: pk, SK: sk }),
+            Key: safeMarshall({ PK: pk }),
             UpdateExpression: `SET ${setExpressions.join(", ")}`,
             ExpressionAttributeNames: exprNames,
             ExpressionAttributeValues: marshall(exprValues),

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import {
-    putItem,
+    updateItem,
     getItem,
     queryByRoomId,
     updateRoomId,
@@ -35,24 +35,14 @@ export async function POST(
             );
         }
 
-        const timestamp = new Date().toISOString();
-
-        // ✅ Represent user-room membership
-        const roomUserItem = {
-            PK: `ROOM#${roomId}`,
-            SK: `USER#${parsed.userId}`,
-            EntityType: "RoomUser",
-            UserId: parsed.userId,
-            RoomId: roomId,
-            Name: parsed.name,
-            Role: parsed.role,
-            AvatarUrl: parsed.avatarUrl || null,
-            JoinedAt: timestamp,
-            LastActiveAt: timestamp,
-        };
-
-        // Save relationship entry
-        await putItem(roomUserItem);
+        // Update the user with the room ID
+        try {
+            await updateItem(`USER#${parsed.userId}`, {
+                roomId: roomId,
+            })
+        } catch (error) {
+            console.log(`Failed to update user with room ID: ${error}`);
+        }
 
         // ✅ If we know the connection ID, tie it to the room
         if (parsed.connectionId) {

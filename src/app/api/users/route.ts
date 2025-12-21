@@ -24,7 +24,6 @@ export async function POST(req: Request) {
 
         const userItem = {
             PK: `USER#${id}`,
-            SK: `USER#${id}`,
             EntityType: "User",
             UserId: id,
             Name: parsed.name,

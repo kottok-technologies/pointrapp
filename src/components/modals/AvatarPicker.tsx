@@ -261,7 +261,7 @@ export default function AvatarPicker({ value, onChange }: AvatarPickerProps) {
             {/* Current avatar preview (circle) */}
             {selected && (
                 <div className="mt-2 flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    <div className="w-16 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                         <Image src={selected} alt="Selected avatar" width={48} height={48} className="object-cover w-full h-full" />
                     </div>
                     <span className="text-xs text-gray-600 break-all">{selected}</span>

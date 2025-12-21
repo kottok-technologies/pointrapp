@@ -27,6 +27,8 @@ export function ParticipantList() {
                                 <Image
                                     src={user.avatarUrl}
                                     alt={user.name}
+                                    width={48}
+                                    height={48}
                                     className="w-8 h-8 rounded-full border"
                                 />
                             ) : (

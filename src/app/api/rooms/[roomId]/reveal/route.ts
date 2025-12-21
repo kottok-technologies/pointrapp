@@ -60,7 +60,7 @@ export async function POST(
         }
 
         // 🏁 Mark story as done
-        await updateItem(`ROOM#${roomId}`, `STORY#${parsed.storyId}`, {
+        await updateItem( `STORY#${parsed.storyId}`, {
             Status: "done",
             Revealed: true,
             Average: average,

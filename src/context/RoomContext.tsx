@@ -8,7 +8,7 @@ import React, {
     useMemo,
     ReactNode,
 } from "react";
-import { useRoomData } from "../hooks/useRoomData";
+import { useRoomData } from "@/hooks/useRoomData";
 import { useUser } from "@/context/UserContext";
 import { useConnection } from "@/context/ConnectionContext";
 import { User, Story, Room, Vote, WebSocketMessage } from "@/lib/types";
