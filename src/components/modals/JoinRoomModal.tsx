@@ -2,24 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useUser } from "@/context/UserContext";
-import { useRoom } from "@/context/RoomContext";
 import type { User } from "@/lib/types";
 
 type Role = "facilitator" | "participant" | "observer";
 
-export function JoinRoomModal() {
-    const { room } = useRoom();
+export function JoinRoomModal({
+                                  joinError,
+                                  onClearError,
+                              }: {
+    joinError: string | null;
+    onClearError: () => void;
+}) {
     const {
         user,
+        setUser,
         availableUsers,
         switchUser,
         createUser,
-        updateUserField,
         deleteUser,
+        setPendingJoinRole,
     } = useUser();
-
-    // If user already exists, hide modal
-    if (user) return null;
 
     const existingUsers = useMemo(() => {
         return Object.values(availableUsers ?? {}).sort((a, b) =>
@@ -27,90 +29,75 @@ export function JoinRoomModal() {
         );
     }, [availableUsers]);
 
-    const [mode, setMode] = useState<"pick" | "create">(existingUsers.length ? "pick" : "create");
-    const [selectedUserId, setSelectedUserId] = useState<string>(existingUsers[0]?.id ?? "");
+    const [mode, setMode] = useState<"pick" | "create">(
+        existingUsers.length ? "pick" : "create",
+    );
+    const [selectedUserId, setSelectedUserId] = useState<string>(
+        existingUsers[0]?.id ?? "",
+    );
 
     const [name, setName] = useState("");
     const [role, setRole] = useState<Role>("participant");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [localError, setLocalError] = useState<string | null>(null);
 
-    // Prefill name from localStorage
+    // Prefill name
     useEffect(() => {
         const saved = localStorage.getItem("pointrapp:displayName");
         if (saved) setName(saved);
     }, []);
 
+    // Persist name
     useEffect(() => {
         if (name.trim().length > 0) {
             localStorage.setItem("pointrapp:displayName", name);
         }
     }, [name]);
 
-    // Keep selection valid as existingUsers changes
+    // Keep selection valid
     useEffect(() => {
         if (mode !== "pick") return;
+
         if (!existingUsers.length) {
             setMode("create");
             setSelectedUserId("");
             return;
         }
+
         if (!selectedUserId || !existingUsers.some((u) => u.id === selectedUserId)) {
             setSelectedUserId(existingUsers[0].id);
         }
     }, [existingUsers, mode, selectedUserId]);
 
-    async function handleUseExisting() {
-        if (!selectedUserId) {
-            setError("Please select a profile.");
-            return;
-        }
-
+    async function handleContinue() {
         setLoading(true);
-        setError(null);
+        setLocalError(null);
+        onClearError();
 
         try {
-            const chosen = (availableUsers as Record<string, User>)[selectedUserId];
-            if (!chosen) throw new Error("Selected profile not found.");
+            let active: User | null = user;
 
-            // Activate that user
-            switchUser(selectedUserId);
+            if (mode === "pick") {
+                if (!selectedUserId) throw new Error("Please select a user.");
+                const chosen = (availableUsers as Record<string, User>)[selectedUserId];
+                if (!chosen) throw new Error("Selected user not found.");
 
-            // Optional: let the user pick a different role at join-time
-            // This updates localStorage + DB via PATCH.
-            if (chosen.role !== role) {
-                // updateUserField uses current `user`, which updates after switchUser.
-                // We can safely schedule the role update in a microtask.
-                queueMicrotask(() => updateUserField("role", role));
+                switchUser(selectedUserId);
+                active = chosen;
+            } else {
+                if (!name.trim()) throw new Error("Please enter your name.");
+                const newUser = await createUser(name.trim(), "observer", "lobby");
+                setUser(newUser);
+                active = newUser;
             }
 
-            // Optional: set their roomId ahead of join (not required)
-            // AutoJoinGate/joinRoom will set it anyway via setRoomForUser
-            // queueMicrotask(() => updateUserField("roomId", room?.id ?? null));
+            if (!active?.id) throw new Error("User creation/selection failed.");
+
+            // ✅ Store join intent (role). AutoJoinGate will join.
+            setPendingJoinRole(role);
         } catch (e) {
             console.error(e);
-            setError("Failed to use that profile. Please try again.");
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function handleCreateNew() {
-        if (!name.trim()) {
-            setError("Please enter your name");
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-
-        try {
-            const roomId = room?.id ?? "lobby";
-            await createUser(name.trim(), role, roomId);
-            // AutoJoinGate will join
-        } catch (e) {
-            console.error(e);
-            setError("Failed to create your profile. Please try again.");
+            setLocalError(e instanceof Error ? e.message : "Failed to continue.");
         } finally {
             setLoading(false);
         }
@@ -119,12 +106,12 @@ export function JoinRoomModal() {
     async function handleDeleteSelected() {
         if (!selectedUserId) return;
         setLoading(true);
-        setError(null);
+        setLocalError(null);
         try {
             await deleteUser(selectedUserId);
         } catch (e) {
             console.error(e);
-            setError("Failed to delete profile.");
+            setLocalError("Failed to delete user.");
         } finally {
             setLoading(false);
         }
@@ -150,7 +137,7 @@ export function JoinRoomModal() {
                             }`}
                             disabled={loading}
                         >
-                            Use profile
+                            Use user
                         </button>
                         <button
                             type="button"
@@ -162,15 +149,55 @@ export function JoinRoomModal() {
                             }`}
                             disabled={loading}
                         >
-                            New profile
+                            New user
                         </button>
                     </div>
                 )}
 
-                {/* Role selection (applies to either mode) */}
+                {/* User selection / creation */}
+                {mode === "pick" ? (
+                    <div className="space-y-2 mb-4">
+                        <p className="text-sm font-medium text-gray-700">Choose a user</p>
+
+                        <select
+                            value={selectedUserId}
+                            onChange={(e) => setSelectedUserId(e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                            disabled={loading}
+                        >
+                            {existingUsers.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                    {u.name}
+                                </option>
+                            ))}
+                        </select>
+
+                        <button
+                            type="button"
+                            onClick={handleDeleteSelected}
+                            disabled={loading || !selectedUserId}
+                            className="w-full px-3 py-2 bg-gray-200 rounded-md text-sm hover:bg-gray-300 transition disabled:opacity-50"
+                        >
+                            Delete selected user
+                        </button>
+                    </div>
+                ) : (
+                    <div className="space-y-3 mb-4">
+                        <input
+                            type="text"
+                            placeholder="Your name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:ring focus:ring-blue-100"
+                            disabled={loading}
+                        />
+                    </div>
+                )}
+
+                {/* Role selection (vertical) */}
                 <div className="mb-4">
                     <p className="text-sm font-medium text-gray-700 mb-2">Role</p>
-                    <div className="flex justify-between items-center text-sm">
+                    <div className="flex flex-col gap-2 text-sm">
                         {(["facilitator", "participant", "observer"] as const).map((r) => (
                             <label
                                 key={r}
@@ -195,73 +222,20 @@ export function JoinRoomModal() {
                     </div>
                 </div>
 
-                {mode === "pick" ? (
-                    <>
-                        <div className="space-y-2 mb-4">
-                            <p className="text-sm font-medium text-gray-700">Choose a profile</p>
-
-                            <select
-                                value={selectedUserId}
-                                onChange={(e) => setSelectedUserId(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
-                                disabled={loading}
-                            >
-                                {existingUsers.map((u) => (
-                                    <option key={u.id} value={u.id}>
-                                        {u.name} ({u.role})
-                                    </option>
-                                ))}
-                            </select>
-
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={handleUseExisting}
-                                    disabled={loading || !selectedUserId}
-                                    className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:bg-blue-300"
-                                >
-                                    {loading ? "Working..." : "Continue"}
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={handleDeleteSelected}
-                                    disabled={loading || !selectedUserId}
-                                    className="px-3 py-2 bg-gray-200 rounded-md text-sm hover:bg-gray-300 transition disabled:opacity-50"
-                                    title="Delete this profile"
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="space-y-3 mb-4">
-                            <input
-                                type="text"
-                                placeholder="Your name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:ring focus:ring-blue-100"
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <button
-                            onClick={handleCreateNew}
-                            disabled={loading}
-                            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:bg-blue-300"
-                        >
-                            {loading ? "Saving..." : "Continue"}
-                        </button>
-                    </>
+                {(localError || joinError) && (
+                    <p className="text-sm text-red-600 mb-3">{localError ?? joinError}</p>
                 )}
 
-                {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
+                <button
+                    onClick={handleContinue}
+                    disabled={loading || (mode === "pick" && !selectedUserId)}
+                    className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:bg-blue-300"
+                >
+                    {loading ? "Continuing..." : "Continue"}
+                </button>
 
                 <p className="text-xs text-gray-500 mt-4 text-center">
-                    You&apos;ll be connected to the room automatically after continuing.
+                    You&apos;ll be connected automatically after continuing.
                 </p>
             </div>
         </div>

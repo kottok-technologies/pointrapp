@@ -11,6 +11,14 @@ export function useUserData() {
     const [availableUsers, setAvailableUsers] = useState<Record<string, User>>({});
     const [user, setUser] = useState<User | null>(null);
 
+    type JoinRole = "facilitator" | "participant" | "observer";
+
+    const [pendingJoinRole, setPendingJoinRole] = useState<JoinRole | null>(null);
+
+    const clearPendingJoinRole = useCallback(() => {
+        setPendingJoinRole(null);
+    }, []);
+
     // -----------------------------------------------------------
     // 🧠 LocalStorage Helpers
     // -----------------------------------------------------------
@@ -218,5 +226,8 @@ export function useUserData() {
         logout,
         refreshUser,
         setRoomForUser,
+        pendingJoinRole,
+        clearPendingJoinRole,
+        setPendingJoinRole,
     };
 }

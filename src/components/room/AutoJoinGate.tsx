@@ -6,32 +6,60 @@ import { useUser } from "@/context/UserContext";
 import { useConnection } from "@/context/ConnectionContext";
 import { JoinRoomModal } from "@/components/modals/JoinRoomModal";
 
+function sleep(ms: number) {
+    return new Promise((r) => setTimeout(r, ms));
+}
+
 export default function AutoJoinGate() {
-    const { participants, actions, loading, error, room } = useRoom();
-    const { user } = useUser();
+    const { participants, actions, loading, error, room, refresh } = useRoom();
+    const { user, pendingJoinRole, clearPendingJoinRole, updateUserField } = useUser();
     const { connectionId } = useConnection();
 
     const [joining, setJoining] = useState(false);
     const [joinError, setJoinError] = useState<string | null>(null);
+    const [joinedLatch, setJoinedLatch] = useState(false);
+
     const attempted = useRef(false);
 
     const isJoined = useMemo(() => {
         if (!user?.id) return false;
+        console.log("Participants")
+        console.log(participants);
+        console.log("User")
+        console.log(user);
         return participants.some((p) => p.id === user.id);
     }, [participants, user?.id]);
 
+    // Reset when room or user changes
+    useEffect(() => {
+        attempted.current = false;
+        setJoinError(null);
+        setJoining(false);
+        setJoinedLatch(false);
+        clearPendingJoinRole(); // ensures URL join asks role every time
+    }, [room?.id, user?.id, clearPendingJoinRole]);
+
+    // If participants finally show joined, drop the latch
+    useEffect(() => {
+        if (isJoined) setJoinedLatch(false);
+    }, [isJoined]);
+
     useEffect(() => {
         if (attempted.current) return;
-        if (!user?.id) return;          // can't auto-join without a user
-        if (!connectionId) return;      // wait for socket id so join payload is complete
-        if (loading) return;            // wait until initial room data is loaded
-        if (error) return;
+
         if (!room) return;
+        if (loading) return;
+        if (error) return;
+
+        if (!user?.id) return;
+        if (!connectionId) return;
 
         if (isJoined) {
             attempted.current = true;
             return;
         }
+
+        if (!pendingJoinRole) return;
 
         attempted.current = true;
         setJoining(true);
@@ -39,21 +67,96 @@ export default function AutoJoinGate() {
 
         (async () => {
             try {
+                updateUserField("role", pendingJoinRole);
                 await actions.joinRoom();
-            } catch (e) {
-                console.error("Auto-join failed:", e);
-                setJoinError("Failed to join room. Please try again.");
+
+                // latch immediately so modal doesn't reappear during refresh lag
+                setJoinedLatch(true);
+
+                // consume role selection for this join
+                clearPendingJoinRole();
+
+                // 🔁 Poll refresh until we appear in participants
+                const maxTries = 6;
+                for (let i = 0; i < maxTries; i++) {
+                    await refresh();
+                    await sleep(250 + i * 150);
+
+                    // Re-check using the latest participants via state update on next render.
+                    // We can't read `participants` synchronously here reliably, so just allow
+                    // the next effect/render to flip `isJoined`.
+                    // If joinedLatch is still true on next loop iteration, keep trying.
+                    if (participants.some((p) => p.id === user.id)) {
+                        setJoinedLatch(false);
+                        return;
+                    }
+                }
+
+                // If we never saw ourselves, fail gracefully
+                setJoinedLatch(false);
+                setJoinError(
+                    "Joined request succeeded, but the room did not reflect your membership. Please retry.",
+                );
                 attempted.current = false; // allow retry
+            } catch (e) {
+                console.error("Join failed:", e);
+                setJoinError("Failed to join room. Please try again.");
+                attempted.current = false;
             } finally {
                 setJoining(false);
             }
         })();
-    }, [actions, user?.id, connectionId, loading, error, room, isJoined]);
+        // NOTE: intentionally not including `participants` in deps to avoid rerunning join
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        actions,
+        room,
+        loading,
+        error,
+        user?.id,
+        connectionId,
+        pendingJoinRole,
+        isJoined,
+        refresh,
+        clearPendingJoinRole,
+    ]);
 
-    // If user isn't selected yet, force the join modal.
-    if (!user) return <JoinRoomModal />;
+    if (error) {
+        return (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+                <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm text-center space-y-3">
+                    <h2 className="text-lg font-semibold text-gray-800">Room error</h2>
+                    <p className="text-sm text-red-600">{error}</p>
+                </div>
+            </div>
+        );
+    }
 
-    // If we're in the middle of joining, show a lightweight loading overlay/card.
+    // If join succeeded but room isn't updated yet
+    if (!isJoined && joinedLatch) {
+        return (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 pointer-events-none">
+                <div className="bg-white rounded-xl shadow-xl p-4 w-full max-w-sm text-center space-y-2">
+                    <h2 className="text-base font-semibold text-gray-800">Loading room…</h2>
+                    <div className="flex justify-center pt-1">
+                        <div className="h-6 w-6 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const shouldShowModal = !isJoined && (!user || !pendingJoinRole || !!joinError);
+
+    if (shouldShowModal) {
+        return (
+            <JoinRoomModal
+                joinError={joinError}
+                onClearError={() => setJoinError(null)}
+            />
+        );
+    }
+
     if (!isJoined && (joining || loading)) {
         return (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
@@ -68,30 +171,5 @@ export default function AutoJoinGate() {
         );
     }
 
-    // If join failed, show JoinRoomModal (so user can retry / reselect)
-    if (!isJoined && joinError) {
-        return (
-            <>
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm text-center space-y-3">
-                        <h2 className="text-lg font-semibold text-gray-800">Couldn’t join</h2>
-                        <p className="text-sm text-red-600">{joinError}</p>
-                        <button
-                            className="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg"
-                            onClick={() => {
-                                attempted.current = false;
-                                setJoinError(null);
-                            }}
-                        >
-                            Retry
-                        </button>
-                    </div>
-                </div>
-                <JoinRoomModal />
-            </>
-        );
-    }
-
-    // Joined: render nothing (room UI is visible)
     return null;
 }

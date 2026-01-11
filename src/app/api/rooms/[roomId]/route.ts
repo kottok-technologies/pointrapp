@@ -43,7 +43,7 @@ export async function GET(
         const users: User[] = items
             .filter((i) => i.entityType === "User")
             .map((u) => ({
-                id: String(u.id ?? crypto.randomUUID()),
+                id: String(u.userId ?? crypto.randomUUID()),
                 name: String(u.name ?? "Unnamed"),
                 role: (u.role as User["role"]) ?? "participant",
                 avatarUrl: u.avatarUrl ? String(u.avatarUrl) : undefined,

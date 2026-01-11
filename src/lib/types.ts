@@ -16,6 +16,11 @@ export type DeckType =
     | "powers-of-two"
     | "custom";
 
+export type Role =
+    | "facilitator"
+    | "participant"
+    | "observer"
+
 // Room (main session)
 export interface Room {
     id: string; // UUID or short code (e.g. "ABC123")

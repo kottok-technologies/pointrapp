@@ -35,10 +35,11 @@ export async function POST(
             );
         }
 
-        // Update the user with the room ID
+        // Update the user with the room ID, and participant type
         try {
             await updateItem(`USER#${parsed.userId}`, {
                 roomId: roomId,
+                role: parsed.role,
             })
         } catch (error) {
             console.log(`Failed to update user with room ID: ${error}`);

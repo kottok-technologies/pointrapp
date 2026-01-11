@@ -9,7 +9,7 @@ import { useModal } from "@/context/ModalContext";
 
 
 export function CreateRoomModal() {
-    const { user } = useUser();
+    const { user, updateUserField, setPendingJoinRole } = useUser();
     const router = useRouter();
 
     // ✅ Initialize name safely (no SSR access)
@@ -47,7 +47,11 @@ export function CreateRoomModal() {
             });
 
             const data = await res.json();
-            if (res.ok && data.roomId) router.push(`/room/${data.roomId}`);
+            if (res.ok && data.roomId) {
+                setPendingJoinRole(role);
+                updateUserField("role", role);
+                router.push(`/room/${data.roomId}`);
+            }
             closeModal();
         } catch (err) {
             if (err instanceof Error) setError(err.message);
