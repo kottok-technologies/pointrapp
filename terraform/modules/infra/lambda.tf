@@ -57,3 +57,17 @@ resource "aws_lambda_function" "register" {
     }
   }
 }
+
+resource "aws_lambda_function" "ping" {
+  function_name = "${var.project_name}-ping-${var.environment}"
+  filename      = "${path.module}/lambdas/dist/onPing.zip"
+  source_code_hash = filebase64sha256("${path.module}/lambdas/dist/onPing.zip")
+  handler       = "onPing.handler"
+  runtime       = var.lambda_runtime
+  role          = aws_iam_role.lambda_role.arn
+  environment {
+    variables = {
+      CONNECTIONS_TABLE = aws_dynamodb_table.ws_connections.name
+    }
+  }
+}

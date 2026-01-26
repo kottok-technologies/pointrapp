@@ -37,6 +37,13 @@ resource "aws_apigatewayv2_integration" "register" {
   integration_method = "POST"
 }
 
+resource "aws_apigatewayv2_integration" "ping" {
+  api_id             = aws_apigatewayv2_api.ws_api.id
+  integration_type   = "AWS_PROXY"
+  integration_uri    = aws_lambda_function.ping.invoke_arn
+  integration_method = "POST"
+}
+
 # --- Routes ---
 resource "aws_apigatewayv2_route" "connect_route" {
   api_id    = aws_apigatewayv2_api.ws_api.id
@@ -60,6 +67,12 @@ resource "aws_apigatewayv2_route" "register_route" {
   api_id    = aws_apigatewayv2_api.ws_api.id
   route_key = "register"
   target    = "integrations/${aws_apigatewayv2_integration.register.id}"
+}
+
+resource "aws_apigatewayv2_route" "ping_route" {
+  api_id    = aws_apigatewayv2_api.ws_api.id
+  route_key = "ping"
+  target    = "integrations/${aws_apigatewayv2_integration.ping.id}"
 }
 
 # --- Lambda Permissions ---
@@ -97,6 +110,14 @@ resource "aws_lambda_permission" "register_permission" {
   function_name = aws_lambda_function.register.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/register"
+}
+
+resource "aws_lambda_permission" "ping_permission" {
+  statement_id  = "AllowPing"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.ping.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.ws_api.execution_arn}/*/ping"
 }
 
 ########################################
