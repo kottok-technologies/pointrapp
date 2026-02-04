@@ -9,10 +9,6 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-type ModalOptions = {
-    content: ReactNode;
-};
-
 type ModalContextValue = {
     openModal: (content: ReactNode) => void;
     closeModal: () => void;

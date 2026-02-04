@@ -11,7 +11,7 @@ import React, {
 import { useRoomData } from "@/hooks/useRoomData";
 import { useUser } from "@/context/UserContext";
 import { useConnection } from "@/context/ConnectionContext";
-import {User, Story, Room, Vote, WebSocketMessage, Role} from "@/lib/types";
+import {User, Story, Room, Vote, WebSocketMessage} from "@/lib/types";
 
 interface RoomContextValue {
     room: Room | null;

@@ -28,7 +28,7 @@ export default function AutoJoinGate() {
         console.log("User")
         console.log(user);
         return participants.some((p) => p.id === user.id);
-    }, [participants, user?.id]);
+    }, [participants, user]);
 
     // Reset when room or user changes
     useEffect(() => {

@@ -55,7 +55,7 @@ export async function POST(
         }
 
         // 🔄 Reset story status for re-estimation
-        await updateItem(`ROOM#${roomId}`, `STORY#${parsed.storyId}`, {
+        await updateItem(`STORY#${parsed.storyId}`, {
             Status: "estimating",
             Revealed: false,
             Average: null,

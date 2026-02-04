@@ -51,7 +51,7 @@ export default function CropModal({ imageSrc, onClose, onSave }: CropModalProps)
             imgRef.current = img;
             draw();
         };
-    }, [imageSrc, open, zoom, offset]);
+    }, [imageSrc, zoom, offset]);
 
     // Drag functionality
     const handleMouseDown = (e: React.MouseEvent) => {
